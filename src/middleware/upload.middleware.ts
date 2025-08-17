@@ -2,9 +2,10 @@ import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
+import { rootPath } from '../config/path';
 
 // Tentukan dan buat folder penyimpanan jika belum ada
-const uploadDir = path.join(__dirname, '..', 'storage/RSpace_data');
+const uploadDir = path.join(rootPath, 'storage', 'RSpace_data');
 fs.mkdirSync(uploadDir, { recursive: true });
 
 // Konfigurasi penyimpanan file
