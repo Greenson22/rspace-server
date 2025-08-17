@@ -8,8 +8,10 @@ export const handleUpload = (req: Request, res: Response) => {
         return res.status(400).json({ message: 'Pilih file .zip untuk diunggah.' });
     }
 
-    res.status(200).json({
-        message: 'File berhasil diunggah!',
+    res.status(201).json({
+        message: 'File berhasil diunggah dan metadata diperbarui!',
+        originalName: req.file.originalname,
+        uniqueName: req.file.filename,
         filePath: req.file.path
     });
 };
