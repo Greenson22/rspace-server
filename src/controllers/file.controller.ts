@@ -48,6 +48,46 @@ export const getFileList = (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
+export const getFileDetail = (req: Request, res: Response, next: NextFunction) => {
+    const { uniqueName } = req.params;
+    try {
+        const metadataPath = path.join(rootPath, 'storage', 'RSpace_data', 'metadata.json');
+
+        if (!fs.existsSync(metadataPath)) {
+            return res.status(404).json({ type: 'NotFound', message: 'File metadata tidak ditemukan.' });
+        }
+
+        const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
+        const metadata: FileMetadata[] = JSON.parse(metadataContent);
+
+        const fileData = metadata.find(file => file.uniqueName === uniqueName);
+
+        if (!fileData) {
+            return res.status(404).json({ type: 'NotFound', message: 'File tidak ditemukan di dalam metadata.' });
+        }
+        
+        // Kirim detail file sebagai response
+        res.status(200).json({
+            uniqueName: fileData.uniqueName,
+            originalName: fileData.originalName,
+            createdAt: fileData.createdAt,
+            uploadedAt: new Date(fileData.createdAt).toLocaleString('id-ID', {
+                timeZone: 'Asia/Makassar',
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+            })
+        });
+
+    } catch (error) {
+        next(error);
+    }
+};
+
 export const deleteFile = (req: Request, res: Response, next: NextFunction) => {
     const { uniqueName } = req.params;
     
