@@ -1,4 +1,4 @@
-import { Request, Response } from 'express';
+import { Request, Response, NextFunction } from 'express';
 import archiver from 'archiver';
 import path from 'path';
 import fs from 'fs';
