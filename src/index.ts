@@ -2,9 +2,15 @@ import express, { Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import cors from 'cors'; // <-- 1. TAMBAHKAN INI
 
 const app = express();
 const PORT = 3000;
+
+// =======================================================
+// Izinkan semua request dari origin manapun (CORS)
+app.use(cors()); // <-- 2. GUNAKAN DI SINI (sebelum route Anda)
+// =======================================================
 
 // Tentukan folder tujuan untuk penyimpanan file
 const uploadDir = path.join(__dirname, 'storage/RSpace_data');
