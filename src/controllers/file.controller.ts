@@ -3,7 +3,7 @@ import path from 'path';
 import fs from 'fs';
 import { rootPath } from '../config/path';
 
-// Interface untuk struktur metadata (opsional, tapi praktik yang baik)
+// Interface untuk struktur metadata
 interface FileMetadata {
     uniqueName: string;
     originalName: string;
@@ -21,8 +21,27 @@ export const getFileList = (req: Request, res: Response, next: NextFunction) => 
         const fileContent = fs.readFileSync(metadataPath, 'utf-8');
         const metadata: FileMetadata[] = JSON.parse(fileContent);
 
-        // Kirim data apa adanya (sudah dalam format yang benar)
-        res.status(200).json(metadata);
+        // Tambahkan properti baru 'uploadedAt' dengan format WITA
+        const fileListWithDate = metadata.map(file => ({
+            uniqueName: file.uniqueName,
+            originalName: file.originalName,
+            createdAt: file.createdAt, // Timestamp asli tetap disertakan
+            uploadedAt: new Date(file.createdAt).toLocaleString('id-ID', {
+                timeZone: 'Asia/Makassar', // Zona Waktu Indonesia Tengah (WITA)
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit', // Ditambahkan detik untuk kelengkapan
+            })
+        }));
+        
+        // Urutkan file dari yang terbaru ke yang terlama
+        fileListWithDate.sort((a, b) => b.createdAt - a.createdAt);
+
+        res.status(200).json(fileListWithDate);
 
     } catch (error) {
         next(error);
