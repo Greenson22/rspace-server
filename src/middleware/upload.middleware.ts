@@ -36,8 +36,7 @@ const updateMetadata = (uniqueName: string, originalName: string) => {
             const oldestFile = metadata.shift(); // Ambil dan hapus elemen pertama
 
             if (oldestFile) {
-                // Saat menghapus, tambahkan kembali ekstensi .zip untuk menemukan file fisik
-                const filePath = path.join(uploadDir, `${oldestFile.uniqueName}.zip`);
+                const filePath = path.join(uploadDir, oldestFile.uniqueName);
                 if (fs.existsSync(filePath)) {
                     fs.unlinkSync(filePath); // Hapus file fisik
                     console.log(`File terlama dihapus: ${oldestFile.originalName}`);
@@ -73,14 +72,11 @@ const storage = multer.diskStorage({
             return cb(new Error('Hanya file .zip yang diizinkan!'), '');
         }
 
-        // Buat nama unik tanpa ekstensi
-        const uniqueIdentifier = uuidv4(); 
+        // Buat nama file unik menggunakan uuid
+        const newFilename = `${uuidv4()}${path.extname(file.originalname)}`;
         
-        // Nama file fisik tetap menggunakan ekstensi
-        const newFilename = `${uniqueIdentifier}${path.extname(file.originalname)}`;
-        
-        // Panggil fungsi untuk memperbarui metadata HANYA dengan nama unik (tanpa ekstensi)
-        updateMetadata(uniqueIdentifier, file.originalname);
+        // Panggil fungsi untuk memperbarui metadata
+        updateMetadata(newFilename, file.originalname);
 
         cb(null, newFilename);
     }
