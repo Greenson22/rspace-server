@@ -21,24 +21,22 @@ export const getFileList = (req: Request, res: Response, next: NextFunction) => 
         const fileContent = fs.readFileSync(metadataPath, 'utf-8');
         const metadata: FileMetadata[] = JSON.parse(fileContent);
 
-        // Tambahkan properti baru 'uploadedAt' dengan format WITA
         const fileListWithDate = metadata.map(file => ({
             uniqueName: file.uniqueName,
             originalName: file.originalName,
-            createdAt: file.createdAt, // Timestamp asli tetap disertakan
+            createdAt: file.createdAt,
             uploadedAt: new Date(file.createdAt).toLocaleString('id-ID', {
-                timeZone: 'Asia/Makassar', // Zona Waktu Indonesia Tengah (WITA)
+                timeZone: 'Asia/Makassar',
                 weekday: 'long',
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',
                 hour: '2-digit',
                 minute: '2-digit',
-                second: '2-digit', // Ditambahkan detik untuk kelengkapan
+                second: '2-digit',
             })
         }));
         
-        // Urutkan file dari yang terbaru ke yang terlama
         fileListWithDate.sort((a, b) => b.createdAt - a.createdAt);
 
         res.status(200).json(fileListWithDate);
@@ -66,7 +64,6 @@ export const getFileDetail = (req: Request, res: Response, next: NextFunction) =
             return res.status(404).json({ type: 'NotFound', message: 'File tidak ditemukan di dalam metadata.' });
         }
         
-        // Kirim detail file sebagai response
         res.status(200).json({
             uniqueName: fileData.uniqueName,
             originalName: fileData.originalName,
@@ -108,8 +105,8 @@ export const deleteFile = (req: Request, res: Response, next: NextFunction) => {
             return res.status(404).json({ type: 'NotFound', message: 'Entri file tidak ditemukan di metadata.' });
         }
 
-        // Hapus file fisik
-        const filePath = path.join(storageDir, uniqueName);
+        // Hapus file fisik dengan menambahkan ekstensi .zip
+        const filePath = path.join(storageDir, `${uniqueName}.zip`);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
