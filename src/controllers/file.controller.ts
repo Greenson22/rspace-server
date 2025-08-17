@@ -1,11 +1,16 @@
-// src/controllers/file.controller.ts
-
-import { Request, Response, NextFunction } from 'express'; // Impor NextFunction
+import { Request, Response, NextFunction } from 'express';
 import path from 'path';
 import fs from 'fs';
 import { rootPath } from '../config/path';
 
-export const getFileList = (req: Request, res: Response, next: NextFunction) => { // Tambahkan next
+// Interface untuk struktur metadata (opsional, tapi praktik yang baik)
+interface FileMetadata {
+    uniqueName: string;
+    originalName: string;
+    createdAt: number;
+}
+
+export const getFileList = (req: Request, res: Response, next: NextFunction) => {
     try {
         const metadataPath = path.join(rootPath, 'storage', 'RSpace_data', 'metadata.json');
 
@@ -14,21 +19,17 @@ export const getFileList = (req: Request, res: Response, next: NextFunction) => 
         }
 
         const fileContent = fs.readFileSync(metadataPath, 'utf-8');
-        const metadata = JSON.parse(fileContent);
+        const metadata: FileMetadata[] = JSON.parse(fileContent);
 
-        const fileList = Object.keys(metadata).map(uniqueName => ({
-            uniqueName: uniqueName,
-            originalName: metadata[uniqueName]
-        }));
-
-        res.status(200).json(fileList);
+        // Kirim data apa adanya (sudah dalam format yang benar)
+        res.status(200).json(metadata);
 
     } catch (error) {
-        next(error); // Teruskan error
+        next(error);
     }
 };
 
-export const deleteFile = (req: Request, res: Response, next: NextFunction) => { // Tambahkan next
+export const deleteFile = (req: Request, res: Response, next: NextFunction) => {
     const { uniqueName } = req.params;
     
     try {
@@ -40,23 +41,27 @@ export const deleteFile = (req: Request, res: Response, next: NextFunction) => {
         }
 
         const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-        const metadata = JSON.parse(metadataContent);
+        let metadata: FileMetadata[] = JSON.parse(metadataContent);
 
-        if (!metadata[uniqueName]) {
+        const fileIndex = metadata.findIndex(file => file.uniqueName === uniqueName);
+
+        if (fileIndex === -1) {
             return res.status(404).json({ type: 'NotFound', message: 'Entri file tidak ditemukan di metadata.' });
         }
 
+        // Hapus file fisik
         const filePath = path.join(storageDir, uniqueName);
         if (fs.existsSync(filePath)) {
             fs.unlinkSync(filePath);
         }
 
-        delete metadata[uniqueName];
+        // Hapus entri dari metadata
+        metadata.splice(fileIndex, 1);
         fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
 
         res.status(200).json({ message: `File ${uniqueName} berhasil dihapus.` });
 
     } catch (error) {
-        next(error); // Teruskan error
+        next(error);
     }
 };

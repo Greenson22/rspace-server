@@ -12,21 +12,48 @@ fs.mkdirSync(uploadDir, { recursive: true });
 // Tentukan path untuk file metadata
 const metadataPath = path.join(uploadDir, 'metadata.json');
 
+// Interface untuk struktur metadata
+interface FileMetadata {
+    uniqueName: string;
+    originalName: string;
+    createdAt: number; // Timestamp dalam milidetik
+}
+
 // Fungsi untuk memperbarui metadata
 const updateMetadata = (uniqueName: string, originalName: string) => {
     try {
-        let metadata = {};
+        let metadata: FileMetadata[] = [];
         // Baca file metadata jika sudah ada
         if (fs.existsSync(metadataPath)) {
             const fileContent = fs.readFileSync(metadataPath, 'utf-8');
-            metadata = fileContent ? JSON.parse(fileContent) : {};
+            metadata = fileContent ? JSON.parse(fileContent) : [];
         }
 
-        // Tambahkan entri baru
-        metadata[uniqueName] = originalName;
+        // Hapus file terlama jika sudah ada 5 file atau lebih
+        if (metadata.length >= 5) {
+            // Urutkan berdasarkan waktu pembuatan (yang paling lama di awal)
+            metadata.sort((a, b) => a.createdAt - b.createdAt);
+            const oldestFile = metadata.shift(); // Ambil dan hapus elemen pertama
+
+            if (oldestFile) {
+                const filePath = path.join(uploadDir, oldestFile.uniqueName);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath); // Hapus file fisik
+                    console.log(`File terlama dihapus: ${oldestFile.originalName}`);
+                }
+            }
+        }
+
+        // Tambahkan entri baru dengan timestamp
+        metadata.push({
+            uniqueName,
+            originalName,
+            createdAt: Date.now(),
+        });
 
         // Tulis kembali ke file
         fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+
     } catch (error) {
         console.error('Gagal memperbarui metadata.json:', error);
         // Jika metadata krusial, Anda bisa melempar error di sini

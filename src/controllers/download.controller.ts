@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import archiver from 'archiver';
 import path from 'path';
 import fs from 'fs';
@@ -33,7 +33,12 @@ export const handleDownloadSrc = (req: Request, res: Response) => {
     archive.finalize();
 };
 
-// ▼▼▼ FUNGSI BARU DITAMBAHKAN DI SINI ▼▼▼
+interface FileMetadata {
+    uniqueName: string;
+    originalName: string;
+    createdAt: number;
+}
+
 export const handleDownloadFile = (req: Request, res: Response) => {
     const { uniqueName } = req.params;
     const storageDir = path.join(rootPath, 'storage', 'RSpace_data');
@@ -45,11 +50,11 @@ export const handleDownloadFile = (req: Request, res: Response) => {
             return res.status(404).json({ message: 'File metadata tidak ditemukan.' });
         }
         const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-        const metadata = JSON.parse(metadataContent);
+        const metadata: FileMetadata[] = JSON.parse(metadataContent);
 
         // 2. Dapatkan nama file asli
-        const originalName = metadata[uniqueName];
-        if (!originalName) {
+        const fileData = metadata.find(file => file.uniqueName === uniqueName);
+        if (!fileData) {
             return res.status(404).json({ message: 'File tidak ditemukan di dalam metadata.' });
         }
 
@@ -61,7 +66,7 @@ export const handleDownloadFile = (req: Request, res: Response) => {
 
         // 4. Kirim file untuk diunduh
         // res.download() akan mengatur header Content-Disposition secara otomatis
-        res.download(filePath, originalName, (err) => {
+        res.download(filePath, fileData.originalName, (err) => {
             if (err) {
                 console.error("Error saat mengirim file:", err);
                 // Header mungkin sudah terkirim sebagian, jadi tidak bisa kirim res.status() lagi
