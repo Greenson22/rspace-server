@@ -1,6 +1,7 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import uploadRoutes from './routes/upload.routes'; // Impor rute
+import downloadRoutes from './routes/download.routes';
 
 const app = express();
 const PORT = 3000;
@@ -11,6 +12,7 @@ app.use(express.json());
 
 // Gunakan Rute
 app.use('/api', uploadRoutes); // Prefix '/api' adalah praktik umum
+app.use('/api', downloadRoutes); 
 
 // Penanganan Error Global (untuk menangkap error dari multer, dll)
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
