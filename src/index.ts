@@ -13,7 +13,7 @@ app.use(cors()); // <-- 2. GUNAKAN DI SINI (sebelum route Anda)
 // =======================================================
 
 // Tentukan folder tujuan untuk penyimpanan file
-const uploadDir = path.join(__dirname, 'storage/RSpace_data');
+const uploadDir = path.join(__dirname, '..', 'storage/RSpace_data');
 
 // Pastikan direktori tujuan ada, jika tidak, buat direktorinya
 if (!fs.existsSync(uploadDir)) {
