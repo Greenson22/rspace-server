@@ -1,5 +1,8 @@
 // src/index.ts
 
+import dotenv from 'dotenv';
+dotenv.config();
+
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { MulterError } from 'multer';
@@ -14,12 +17,18 @@ import perpuskuUploadRoutes from './routes/perpusku_upload.routes';
 import perpuskuDownloadRoutes from './routes/perpusku_download.routes';
 import perpuskuFileRoutes from './routes/perpusku_file.routes';
 
+import { apiKeyAuth } from './middleware/auth.middleware';
+
 const app = express();
 const PORT = 3000;
 
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// TERAPKAN MIDDLEWARE KEAMANAN DI SINI
+// Semua request ke /api/* akan dicek terlebih dahulu oleh apiKeyAuth
+app.use('/api', apiKeyAuth);
 
 // Gunakan Rute RSpace
 app.use('/api/rspace', rspaceUploadRoutes);
