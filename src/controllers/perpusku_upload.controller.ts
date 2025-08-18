@@ -1,14 +1,12 @@
 import { Request, Response } from 'express';
+import { uploadFileService } from '../services/perpusku_upload.service';
 
 export const handleUpload = (req: Request, res: Response) => {
-    if (!req.file) {
-        return res.status(400).json({ message: 'Pilih file .zip untuk diunggah.' });
+    try {
+        const result = uploadFileService(req);
+        res.status(201).json(result);
+    } catch (error) {
+        const err = error as Error
+        res.status(400).json({ message: err.message });
     }
-
-    res.status(201).json({
-        message: 'File berhasil diunggah dan metadata diperbarui!',
-        originalName: req.file.originalname,
-        uniqueName: req.file.filename,
-        filePath: req.file.path
-    });
 };
