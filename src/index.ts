@@ -15,9 +15,9 @@ app.use(cors());
 app.use(express.json());
 
 // Gunakan Rute
-app.use('/api', uploadRoutes);
-app.use('/api', downloadRoutes);
-app.use('/api', fileRoutes);
+app.use('/api/rspace', uploadRoutes);
+app.use('/api/rspace', downloadRoutes);
+app.use('/api/rspace', fileRoutes);
 
 // Penanganan Error Global yang Ditingkatkan
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
