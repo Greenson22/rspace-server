@@ -1,6 +1,6 @@
 import { Router } from 'express';
-import { upload } from '../middleware/upload.middleware'; // Impor middleware
-import { handleUpload } from '../controllers/upload.controller'; // Impor controller
+import { upload } from '../middleware/rspace_upload.middleware'; // Impor middleware
+import { handleUpload } from '../controllers/rspace_upload.controller'; // Impor controller
 
 const router = Router();
 

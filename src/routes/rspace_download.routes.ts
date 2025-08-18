@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { handleDownloadSrc, handleDownloadFile } from '../controllers/download.controller';
+import { handleDownloadSrc, handleDownloadFile } from '../controllers/rspace_download.controller';
 
 const router = Router();
 

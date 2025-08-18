@@ -3,9 +3,9 @@
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { MulterError } from 'multer'; // Impor MulterError
-import uploadRoutes from './routes/upload.routes';
-import downloadRoutes from './routes/download.routes';
-import fileRoutes from './routes/file.routes';
+import uploadRoutes from './routes/rspace_upload.routes';
+import downloadRoutes from './routes/rspace_download.routes';
+import fileRoutes from './routes/rspace_file.routes';
 
 const app = express();
 const PORT = 3000;

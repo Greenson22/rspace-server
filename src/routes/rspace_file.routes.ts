@@ -1,7 +1,7 @@
 // src/routes/file.routes.ts
 
 import { Router } from 'express';
-import { deleteFile, getFileList, getFileDetail } from '../controllers/file.controller';
+import { deleteFile, getFileList, getFileDetail } from '../controllers/rspace_file.controller';
 
 const router = Router();
 
