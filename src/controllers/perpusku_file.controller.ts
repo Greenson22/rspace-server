@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { getFileListService, getFileDetailService, deleteFileService } from '../services/rspace_file.service';
+import { getFileListService, getFileDetailService, deleteFileService } from '../services/perpusku_file.service';
 
 export const getFileList = (req: Request, res: Response, next: NextFunction) => {
     try {
