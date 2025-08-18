@@ -28,7 +28,7 @@ app.use(express.json());
 
 // TERAPKAN MIDDLEWARE KEAMANAN DI SINI
 // Semua request ke /api/* akan dicek terlebih dahulu oleh apiKeyAuth
-app.use('/api', apiKeyAuth);
+// app.use('/api', apiKeyAuth);
 
 // Gunakan Rute RSpace
 app.use('/api/rspace', rspaceUploadRoutes);
