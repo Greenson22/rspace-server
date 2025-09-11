@@ -17,6 +17,9 @@ import perpuskuUploadRoutes from './routes/perpusku_upload.routes';
 import perpuskuDownloadRoutes from './routes/perpusku_download.routes';
 import perpuskuFileRoutes from './routes/perpusku_file.routes';
 
+// Discussion Routes (TAMBAHKAN INI)
+import discussionUploadRoutes from './routes/discussion_upload.routes';
+
 import { apiKeyAuth } from './middleware/auth.middleware';
 
 const app = express();
@@ -27,7 +30,6 @@ app.use(cors());
 app.use(express.json());
 
 // TERAPKAN MIDDLEWARE KEAMANAN DI SINI
-// Semua request ke /api/* akan dicek terlebih dahulu oleh apiKeyAuth
 app.use('/api', apiKeyAuth);
 
 // Gunakan Rute RSpace
@@ -39,6 +41,9 @@ app.use('/api/rspace', rspaceFileRoutes);
 app.use('/api/perpusku', perpuskuUploadRoutes);
 app.use('/api/perpusku', perpuskuDownloadRoutes);
 app.use('/api/perpusku', perpuskuFileRoutes);
+
+// Gunakan Rute Discussion (TAMBAHKAN INI)
+app.use('/api/discussion', discussionUploadRoutes);
 
 
 // Penanganan Error Global yang Ditingkatkan
