@@ -19,6 +19,7 @@ import perpuskuFileRoutes from './routes/perpusku_file.routes';
 
 // Discussion Routes (TAMBAHKAN INI)
 import discussionUploadRoutes from './routes/discussion_upload.routes';
+import discussionFileRoutes from './routes/discussion_file.routes';
 
 import { apiKeyAuth } from './middleware/auth.middleware';
 
@@ -44,6 +45,7 @@ app.use('/api/perpusku', perpuskuFileRoutes);
 
 // Gunakan Rute Discussion (TAMBAHKAN INI)
 app.use('/api/discussion', discussionUploadRoutes);
+app.use('/api/discussion', discussionFileRoutes);
 
 
 // Penanganan Error Global yang Ditingkatkan
