@@ -29,6 +29,27 @@ const updateMetadata = (uniqueName: string, originalName: string) => {
             metadata = fileContent ? JSON.parse(fileContent) : [];
         }
 
+        // ==========================================================
+        // TAMBAHKAN BAGIAN INI
+        // ==========================================================
+        // Hapus file terlama jika sudah ada 5 file atau lebih
+        if (metadata.length >= 5) {
+            // Urutkan berdasarkan waktu pembuatan (yang paling lama di awal)
+            metadata.sort((a, b) => a.createdAt - b.createdAt);
+            const oldestFile = metadata.shift(); // Ambil dan hapus elemen pertama
+
+            if (oldestFile) {
+                const filePath = path.join(uploadDir, oldestFile.uniqueName);
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath); // Hapus file fisik
+                    console.log(`File terlama di PerpusKu dihapus: ${oldestFile.originalName}`);
+                }
+            }
+        }
+        // ==========================================================
+        // AKHIR DARI BAGIAN YANG DITAMBAHKAN
+        // ==========================================================
+
         // Tambahkan entri baru dengan timestamp
         metadata.push({
             uniqueName,
@@ -43,7 +64,6 @@ const updateMetadata = (uniqueName: string, originalName: string) => {
         console.error('Gagal memperbarui metadata.json:', error);
     }
 };
-
 
 // Konfigurasi penyimpanan file
 const storage = multer.diskStorage({
