@@ -3,6 +3,7 @@
 import { Request } from 'express';
 import fs from 'fs';
 import path from 'path';
+import AdmZip from 'adm-zip';
 import { rootPath } from '../config/path';
 
 export const archiveDiscussionsService = (req: Request) => {
@@ -15,7 +16,7 @@ export const archiveDiscussionsService = (req: Request) => {
     const targetFilename = 'FinishedDiscussionsArchive.zip';
     const targetFilePath = path.join(uploadDir, targetFilename);
 
-    // Jika file arsip utama sudah ada, buat cadangannya
+    // Logika untuk mencadangkan arsip lama tetap sama
     if (fs.existsSync(targetFilePath)) {
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
@@ -26,10 +27,30 @@ export const archiveDiscussionsService = (req: Request) => {
         console.log(`Arsip lama disimpan sebagai: ${archiveBackupFilename}`);
     }
 
-    // Ganti nama file sementara menjadi nama file arsip utama
-    fs.renameSync(tempFilePath, targetFilePath);
+    // === PERUBAIKAN DI SINI ===
+    // Salin file dari path temporer ke path tujuan
+    fs.copyFileSync(tempFilePath, targetFilePath);
+    // Hapus file temporer secara manual setelah disalin
+    fs.unlinkSync(tempFilePath);
+    // ==========================
 
-    // Perbarui metadata waktu unggah
+    // Logika ekstraksi (tidak berubah)
+    const extractDir = path.join(uploadDir, 'extracted');
+    if (fs.existsSync(extractDir)) {
+        fs.rmSync(extractDir, { recursive: true, force: true });
+    }
+    fs.mkdirSync(extractDir, { recursive: true });
+
+    try {
+        const zip = new AdmZip(targetFilePath);
+        zip.extractAllTo(extractDir, /*overwrite*/ true);
+        console.log(`Arsip berhasil diekstrak ke: ${extractDir}`);
+    } catch (error) {
+        console.error('Gagal mengekstrak file arsip:', error);
+        throw new Error('File berhasil diunggah, tetapi gagal diekstrak di server.');
+    }
+    
+    // Logika pembaruan metadata (tidak berubah)
     const metadataPath = path.join(uploadDir, 'metadata.json');
     const metadata = {
         lastUploadedAt: new Date().toISOString(),
@@ -40,8 +61,8 @@ export const archiveDiscussionsService = (req: Request) => {
     fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
 
     return {
-        message: 'Arsip diskusi berhasil diunggah dan disimpan di server!',
-        fileName: targetFilename, // Kembalikan nama file target
+        message: 'Arsip berhasil diunggah dan diekstrak di server!',
+        fileName: targetFilename,
         originalName: req.file.originalname,
         path: targetFilePath
     };
