@@ -17,9 +17,12 @@ import perpuskuUploadRoutes from './routes/perpusku_upload.routes';
 import perpuskuDownloadRoutes from './routes/perpusku_download.routes';
 import perpuskuFileRoutes from './routes/perpusku_file.routes';
 
-// Discussion Routes (TAMBAHKAN INI)
-import discussionUploadRoutes from './routes/discussion_upload.routes';
-import discussionFileRoutes from './routes/discussion_file.routes';
+// Discussion Routes (diganti namanya agar lebih jelas)
+import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
+import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
+
+// Archive Routes (TAMBAHKAN INI)
+import archiveRoutes from './routes/archive.routes';
 
 import { apiKeyAuth } from './middleware/auth.middleware';
 
@@ -30,7 +33,7 @@ const PORT = 3000;
 app.use(cors());
 app.use(express.json());
 
-// TERAPKAN MIDDLEWARE KEAMANAN DI SINI
+// Terapkan Middleware Keamanan
 app.use('/api', apiKeyAuth);
 
 // Gunakan Rute RSpace
@@ -43,12 +46,15 @@ app.use('/api/perpusku', perpuskuUploadRoutes);
 app.use('/api/perpusku', perpuskuDownloadRoutes);
 app.use('/api/perpusku', perpuskuFileRoutes);
 
-// Gunakan Rute Discussion (TAMBAHKAN INI)
-app.use('/api/discussion', discussionUploadRoutes);
-app.use('/api/discussion', discussionFileRoutes);
+// Gunakan Rute Discussion (nama lama, bisa dihapus jika tidak dipakai lagi)
+app.use('/api/discussion', finishedDiscussionUploadRoutes);
+app.use('/api/discussion', finishedDiscussionFileRoutes);
+
+// Gunakan Rute Archive (TAMBAHKAN INI)
+app.use('/api/archive', archiveRoutes);
 
 
-// Penanganan Error Global yang Ditingkatkan
+// Penanganan Error Global
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
 
