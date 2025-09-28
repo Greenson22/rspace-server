@@ -5,15 +5,13 @@ import path from 'path';
 import fs from 'fs';
 import { Request } from 'express';
 import { rootPath } from '../config/path';
+import { v4 as uuidv4 } from 'uuid'; // Gunakan uuid untuk nama sementara
 
 // Tentukan dan buat folder penyimpanan jika belum ada
 const uploadDir = path.join(rootPath, 'storage', 'Archive_data');
 fs.mkdirSync(uploadDir, { recursive: true });
 
-// Nama file yang konsisten untuk arsip utama
-const targetFilename = 'FinishedDiscussionsArchive.zip';
-
-// Konfigurasi penyimpanan file
+// Konfigurasi penyimpanan sederhana
 const storage = multer.diskStorage({
     destination: (req: Request, file: Express.Multer.File, cb) => {
         cb(null, uploadDir);
@@ -22,22 +20,9 @@ const storage = multer.diskStorage({
         if (!file.originalname.match(/\.zip$/)) {
             return cb(new Error('Hanya file .zip yang diizinkan!'), '');
         }
-
-        const targetFilePath = path.join(uploadDir, targetFilename);
-
-        // Jika file arsip utama sudah ada, buat cadangan
-        if (fs.existsSync(targetFilePath)) {
-            const now = new Date();
-            const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-            const archiveFilename = `Archive_backup_${timestamp}.zip`;
-            const archiveFilePath = path.join(uploadDir, archiveFilename);
-            
-            fs.renameSync(targetFilePath, archiveFilePath);
-            console.log(`Arsip lama disimpan sebagai: ${archiveFilename}`);
-        }
-        
-        // Gunakan nama file target untuk file yang baru diunggah
-        cb(null, targetFilename);
+        // Buat nama file sementara yang unik untuk menghindari konflik
+        const tempFilename = `${uuidv4()}.tmp`;
+        cb(null, tempFilename);
     }
 });
 
