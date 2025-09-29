@@ -12,11 +12,17 @@ export const archiveDiscussionsService = (req: Request) => {
     }
 
     const uploadDir = path.join(rootPath, 'storage', 'Archive_data');
-    const tempFilePath = req.file.path; // Path file sementara yang diunggah multer
+    const tempFilePath = req.file.path;
     const targetFilename = 'FinishedDiscussionsArchive.zip';
     const targetFilePath = path.join(uploadDir, targetFilename);
+    const extractDir = path.join(uploadDir, 'extracted');
 
-    // Logika untuk mencadangkan arsip lama tetap sama
+    // === PERBAIKAN: Pastikan semua direktori yang diperlukan ada ===
+    // Membuat folder 'storage/Archive_data' jika belum ada.
+    fs.mkdirSync(uploadDir, { recursive: true });
+    // =============================================================
+
+    // Logika untuk mencadangkan arsip lama jika file zip utama sudah ada
     if (fs.existsSync(targetFilePath)) {
         const now = new Date();
         const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
@@ -27,15 +33,11 @@ export const archiveDiscussionsService = (req: Request) => {
         console.log(`Arsip lama disimpan sebagai: ${archiveBackupFilename}`);
     }
 
-    // === PERUBAIKAN DI SINI ===
-    // Salin file dari path temporer ke path tujuan
+    // Salin file dari path temporer ke path tujuan, lalu hapus temporer
     fs.copyFileSync(tempFilePath, targetFilePath);
-    // Hapus file temporer secara manual setelah disalin
     fs.unlinkSync(tempFilePath);
-    // ==========================
 
-    // Logika ekstraksi (tidak berubah)
-    const extractDir = path.join(uploadDir, 'extracted');
+    // Hapus folder ekstraksi lama (jika ada) dan buat yang baru
     if (fs.existsSync(extractDir)) {
         fs.rmSync(extractDir, { recursive: true, force: true });
     }
