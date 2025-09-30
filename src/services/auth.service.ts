@@ -4,15 +4,15 @@ import db from './database.service';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 
-// ==> 1. DEFINISIKAN INTERFACE UNTUK USER DARI DATABASE <==
 interface User {
     id: number;
     email: string;
     password: string;
+    name: string;
     createdAt: string;
 }
 
-export const registerUser = (email: string, password: string): Promise<{ message: string }> => {
+export const registerUser = (email: string, password: string, name: string): Promise<{ message: string }> => { // <-- TAMBAHKAN 'name'
     return new Promise((resolve, reject) => {
         bcrypt.hash(password, 10, (err, hash) => {
             if (err) {
@@ -20,9 +20,10 @@ export const registerUser = (email: string, password: string): Promise<{ message
             }
 
             const createdAt = new Date().toISOString();
-            const sql = 'INSERT INTO users (email, password, createdAt) VALUES (?, ?, ?)';
+            // PERBARUI SQL DAN PARAMETER
+            const sql = 'INSERT INTO users (email, password, name, createdAt) VALUES (?, ?, ?, ?)';
             
-            db.run(sql, [email, hash, createdAt], function (err) {
+            db.run(sql, [email, hash, name, createdAt], function (err) {
                 if (err) {
                     if (err.message.includes('UNIQUE constraint failed')) {
                         return reject(new Error('Email sudah terdaftar.'));
@@ -39,7 +40,6 @@ export const loginUser = (email: string, password: string): Promise<{ message: s
     return new Promise((resolve, reject) => {
         const sql = 'SELECT * FROM users WHERE email = ?';
 
-        // ==> 2. TERAPKAN INTERFACE PADA PARAMETER 'user' <==
         db.get(sql, [email], (err, user: User) => {
             if (err) {
                 return reject(new Error('Error pada server.'));
@@ -48,7 +48,6 @@ export const loginUser = (email: string, password: string): Promise<{ message: s
                 return reject(new Error('Email atau password salah.'));
             }
 
-            // Sekarang TypeScript tahu bahwa 'user.password' ada dan tipenya string
             bcrypt.compare(password, user.password, (err, isMatch) => {
                 if (err) {
                     return reject(new Error('Error pada server saat membandingkan password.'));
@@ -57,7 +56,8 @@ export const loginUser = (email: string, password: string): Promise<{ message: s
                     return reject(new Error('Email atau password salah.'));
                 }
 
-                const payload = { userId: user.id, email: user.email };
+                // Sertakan 'name' dalam payload token
+                const payload = { userId: user.id, email: user.email, name: user.name };
                 const secret = process.env.JWT_SECRET || 'default_secret';
                 const token = jwt.sign(payload, secret, { expiresIn: '7d' });
 

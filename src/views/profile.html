@@ -12,10 +12,23 @@
         .navbar a:hover { text-decoration: underline; }
         .container { max-width: 900px; margin: 40px auto; padding: 20px; }
         .profile-card { background-color: white; padding: 30px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); }
-        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
         p { color: #34495e; line-height: 1.8; font-size: 1.1em; }
         strong { color: #2c3e50; }
         #logout-btn { cursor: pointer; }
+        /* Style untuk form edit */
+        .edit-form { display: none; margin-top: 20px; }
+        .input-group { margin-bottom: 15px; }
+        label { display: block; margin-bottom: 5px; font-weight: 500; }
+        input, textarea { width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; font-size: 1em; }
+        textarea { resize: vertical; min-height: 80px; }
+        .form-actions { display: flex; gap: 10px; margin-top: 20px; }
+        button { padding: 10px 20px; border: none; border-radius: 5px; cursor: pointer; font-size: 1em; }
+        .btn-save { background-color: #27ae60; color: white; }
+        .btn-cancel { background-color: #7f8c8d; color: white; }
+        .message { margin-top: 15px; padding: 10px; border-radius: 5px; text-align: center; }
+        .success { background-color: #e8f5e9; color: #2e7d32; }
+        .error { background-color: #ffebee; color: #c62828; }
     </style>
 </head>
 <body>
@@ -23,10 +36,37 @@
 
     <div class="container">
         <div class="profile-card">
-            <h2>Profil Saya</h2>
-            <p><strong>ID Pengguna:</strong> <span id="user-id">Memuat...</span></p>
-            <p><strong>Email:</strong> <span id="user-email">Memuat...</span></p>
-            <p><strong>Akun Dibuat:</strong> <span id="user-created">Memuat...</span></p>
+            <h2>
+                <span>Profil Saya</span>
+                <button id="edit-profile-btn" style="font-size: 0.8em; padding: 8px 12px; border-radius: 5px; border: 1px solid #3498db; background: transparent; color: #3498db; cursor: pointer;">Edit Profil</button>
+            </h2>
+            <div id="profile-view">
+                <p><strong>Nama Lengkap:</strong> <span id="user-name">Memuat...</span></p>
+                <p><strong>Email:</strong> <span id="user-email">Memuat...</span></p>
+                <p><strong>Tanggal Lahir:</strong> <span id="user-birthdate">Memuat...</span></p>
+                <p><strong>Bio/Catatan:</strong> <span id="user-bio">Memuat...</span></p>
+                <p><strong>Akun Dibuat:</strong> <span id="user-created">Memuat...</span></p>
+            </div>
+            
+            <form id="edit-profile-form" class="edit-form">
+                <div class="input-group">
+                    <label for="name">Nama Lengkap</label>
+                    <input type="text" id="edit-name" name="name" required>
+                </div>
+                <div class="input-group">
+                    <label for="birth_date">Tanggal Lahir</label>
+                    <input type="date" id="edit-birth_date" name="birth_date">
+                </div>
+                 <div class="input-group">
+                    <label for="bio">Bio / Catatan</label>
+                    <textarea id="edit-bio" name="bio"></textarea>
+                </div>
+                <div id="form-message" class="message"></div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-save">Simpan Perubahan</button>
+                    <button type="button" id="cancel-edit-btn" class="btn-cancel">Batal</button>
+                </div>
+            </form>
         </div>
     </div>
 
@@ -37,22 +77,91 @@
             const token = localStorage.getItem('rspace_token');
             if (!token) return;
 
-            fetch('/api/profile', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            })
-            .then(res => {
-                if (!res.ok) throw new Error('Gagal memuat profil');
-                return res.json();
-            })
-            .then(data => {
-                document.getElementById('user-id').innerText = data.id;
-                document.getElementById('user-email').innerText = data.email;
+            const profileView = document.getElementById('profile-view');
+            const editForm = document.getElementById('edit-profile-form');
+            const editBtn = document.getElementById('edit-profile-btn');
+            const cancelBtn = document.getElementById('cancel-edit-btn');
+            const formMessage = document.getElementById('form-message');
+
+            function populateView(data) {
+                document.getElementById('user-name').innerText = data.name || '-';
+                document.getElementById('user-email').innerText = data.email || '-';
+                document.getElementById('user-birthdate').innerText = data.birth_date || '-';
+                document.getElementById('user-bio').innerText = data.bio || '-';
                 document.getElementById('user-created').innerText = new Date(data.createdAt).toLocaleString('id-ID');
-            })
-            .catch(error => {
-                console.error(error);
-                document.querySelector('.profile-card').innerHTML = `<p style="color: red;">Gagal memuat profil.</p>`;
+            }
+
+            function populateForm(data) {
+                document.getElementById('edit-name').value = data.name || '';
+                document.getElementById('edit-birth_date').value = data.birth_date || '';
+                document.getElementById('edit-bio').value = data.bio || '';
+            }
+
+            function toggleEditMode(isEditing) {
+                profileView.style.display = isEditing ? 'none' : 'block';
+                editForm.style.display = isEditing ? 'block' : 'none';
+            }
+
+            async function loadProfile() {
+                try {
+                    const response = await fetch('/api/profile', {
+                        headers: { 'Authorization': 'Bearer ' + token }
+                    });
+                    if (!response.ok) throw new Error('Gagal memuat profil');
+                    const data = await response.json();
+                    populateView(data);
+                    populateForm(data);
+                } catch(e) {
+                     console.error(e);
+                     document.querySelector('.profile-card').innerHTML = `<p style="color: red;">Gagal memuat profil.</p>`;
+                }
+            }
+
+            editBtn.addEventListener('click', () => toggleEditMode(true));
+            cancelBtn.addEventListener('click', () => toggleEditMode(false));
+
+            editForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                formMessage.innerHTML = '';
+                formMessage.className = 'message';
+
+                const updatedData = {
+                    name: document.getElementById('edit-name').value,
+                    birth_date: document.getElementById('edit-birth_date').value,
+                    bio: document.getElementById('edit-bio').value,
+                };
+
+                try {
+                     const response = await fetch('/api/profile', {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + token,
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(updatedData)
+                    });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || 'Gagal memperbarui');
+                    
+                    formMessage.className = 'message success';
+                    formMessage.innerText = result.message;
+
+                    // Muat ulang data tampilan
+                    await loadProfile();
+                    
+                    setTimeout(() => {
+                       toggleEditMode(false);
+                       formMessage.innerHTML = '';
+                       formMessage.className = 'message';
+                    }, 2000);
+
+                } catch(err) {
+                    formMessage.className = 'message error';
+                    formMessage.innerText = err.message;
+                }
             });
+
+            loadProfile();
         });
     </script>
 </body>

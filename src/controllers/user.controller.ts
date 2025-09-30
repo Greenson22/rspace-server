@@ -3,9 +3,9 @@
 import { Request, Response, NextFunction } from 'express';
 import * as userService from '../services/user.service';
 
+// ... (getUserProfile, getAllUsers, deleteUser tidak berubah) ...
 export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // req.user diisi oleh middleware jwtAuth
         const userId = req.user.userId;
         const user = await userService.findUserById(userId);
         res.json(user);
@@ -13,7 +13,6 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
         next(error);
     }
 };
-
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await userService.findAllUsers();
@@ -22,15 +21,25 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         next(error);
     }
 };
-
 export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userIdToDelete = parseInt(req.params.id, 10);
-        // Mencegah admin menghapus dirinya sendiri
         if (req.user.userId === userIdToDelete) {
             return res.status(400).json({ message: 'Admin tidak dapat menghapus dirinya sendiri.' });
         }
         const result = await userService.deleteUserById(userIdToDelete);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// CONTROLLER BARU
+export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user.userId;
+        const { name, birth_date, bio } = req.body;
+        const result = await userService.updateUserProfile(userId, name, birth_date, bio);
         res.json(result);
     } catch (error) {
         next(error);

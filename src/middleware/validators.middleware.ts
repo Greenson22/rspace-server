@@ -3,6 +3,10 @@
 import { body } from 'express-validator';
 
 export const validateRegistration = [
+    body('name') // <-- TAMBAHKAN INI
+        .trim()
+        .notEmpty()
+        .withMessage('Nama tidak boleh kosong.'),
     body('email')
         .isEmail()
         .withMessage('Format email tidak valid.')
@@ -13,6 +17,7 @@ export const validateRegistration = [
 ];
 
 export const validateLogin = [
+    // ... (tidak ada perubahan di sini)
     body('email')
         .isEmail()
         .withMessage('Format email tidak valid.')
