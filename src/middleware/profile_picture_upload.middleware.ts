@@ -2,6 +2,7 @@
 
 import multer from 'multer';
 import path from 'path';
+import fs from 'fs-extra'; // Menggunakan fs-extra untuk kemudahan
 import { Request } from 'express';
 import { getUserStoragePath } from '../config/path';
 
@@ -12,14 +13,35 @@ const storage = multer.diskStorage({
         if (!userId) {
             return cb(new Error('Autentikasi gagal, ID pengguna tidak ditemukan.'), '');
         }
-        // Simpan file ke direktori profile_pictures milik pengguna
+        
         const userProfilePicPath = getUserStoragePath(userId, 'profile_pictures');
         cb(null, userProfilePicPath);
     },
     filename: (req: Request, file: Express.Multer.File, cb) => {
-        // Buat nama file unik untuk menghindari konflik
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        const newFilename = `profile-${uniqueSuffix}${path.extname(file.originalname)}`;
+        // ==> PERUBAHAN UTAMA 1: Hapus file lama sebelum menyimpan yang baru <==
+        const userId = req.user?.userId;
+        if (userId) {
+            const userProfilePicPath = getUserStoragePath(userId, 'profile_pictures');
+            // Baca semua file di direktori
+            fs.readdir(userProfilePicPath, (err, files) => {
+                if (err) {
+                    console.error("Gagal membaca direktori foto profil:", err);
+                    // Lanjutkan meskipun gagal membaca, agar upload tidak gagal total
+                } else {
+                    // Hapus semua file yang ada di direktori tersebut
+                    for (const oldFile of files) {
+                        fs.unlink(path.join(userProfilePicPath, oldFile), err => {
+                            if (err) console.error(`Gagal menghapus foto profil lama: ${oldFile}`, err);
+                            else console.log(`Foto profil lama dihapus: ${oldFile}`);
+                        });
+                    }
+                }
+            });
+        }
+        
+        // ==> PERUBAHAN UTAMA 2: Gunakan nama file yang konsisten <==
+        // Simpan file dengan nama 'profile' + ekstensi aslinya (e.g., profile.jpg, profile.png)
+        const newFilename = `profile${path.extname(file.originalname)}`;
         cb(null, newFilename);
     }
 });

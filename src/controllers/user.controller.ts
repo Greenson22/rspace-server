@@ -48,7 +48,7 @@ export const updateProfile = async (req: Request, res: Response, next: NextFunct
     }
 };
 
-// CONTROLLER BARU UNTUK UPLOAD FOTO PROFIL
+// CONTROLLER BARU UNTUK UPLOAD FOTO PROFIL (DIPERBARUI)
 export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
     try {
         if (!req.file) {
@@ -57,9 +57,9 @@ export const uploadProfilePicture = async (req: Request, res: Response, next: Ne
 
         const userId = req.user.userId;
         
-        // Buat path relatif yang akan disimpan di DB dan digunakan di frontend
-        // Contoh: /storage/user_1/profile_pictures/profile-12345.jpg
-        const relativePath = path.join('/storage', `user_${userId}`, 'profile_pictures', req.file.filename);
+        // ==> PERBAIKAN DI SINI: Hapus '/storage' dari path yang disimpan <==
+        // Sekarang path-nya akan menjadi: user_1/profile_pictures/namafile.jpg
+        const relativePath = path.join(`user_${userId}`, 'profile_pictures', req.file.filename);
 
         await userService.updateUserPicturePath(userId, relativePath);
 
