@@ -2,45 +2,31 @@
 
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
-import { Request } from 'express';
+import fs from 'fs-extra';
 import { rootPath } from '../config/path';
 
-const uploadDir = path.join(rootPath, 'storage', 'Archive_data');
-fs.mkdirSync(uploadDir, { recursive: true });
+// Tentukan direktori untuk unggahan temporer
+const tempUploadDir = path.join(rootPath, 'storage', 'temp_uploads');
+fs.ensureDirSync(tempUploadDir); // Pastikan folder ini ada
 
-const targetFilename = 'FinishedDiscussionsArchive.zip';
-
+// Konfigurasi multer untuk menyimpan file ke disk temporer
 const storage = multer.diskStorage({
-    destination: (req: Request, file: Express.Multer.File, cb) => {
-        cb(null, uploadDir);
+    destination: (req, file, cb) => {
+        cb(null, tempUploadDir);
     },
-    filename: (req: Request, file: Express.Multer.File, cb) => {
-        if (!file.originalname.match(/\.zip$/)) {
-            return cb(new Error('Hanya file .zip yang diizinkan!'), '');
-        }
-
-        const targetFilePath = path.join(uploadDir, targetFilename);
-
-        // Jika file arsip utama sudah ada, buat cadangannya terlebih dahulu
-        if (fs.existsSync(targetFilePath)) {
-            const now = new Date();
-            const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-            const archiveBackupFilename = `Archive_backup_${timestamp}.zip`;
-            const archiveBackupPath = path.join(uploadDir, archiveBackupFilename);
-            
-            try {
-                fs.renameSync(targetFilePath, archiveBackupPath);
-                console.log(`Arsip lama disimpan sebagai: ${archiveBackupFilename}`);
-            } catch (error) {
-                 console.error("Gagal membuat cadangan arsip lama:", error);
-                 // Lanjutkan saja, coba timpa file yang ada
-            }
-        }
-        
-        // Simpan file baru dengan nama target yang konsisten
-        cb(null, targetFilename);
+    filename: (req, file, cb) => {
+        // Beri nama acak untuk menghindari konflik jika ada unggahan simultan
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
     }
 });
 
-export const upload = multer({ storage: storage });
+export const upload = multer({
+    storage: storage, // Gunakan konfigurasi storage di atas
+    fileFilter: (req, file, cb) => {
+        if (!file.originalname.match(/\.zip$/)) {
+            return cb(new Error('Hanya file .zip yang diizinkan!'));
+        }
+        cb(null, true);
+    }
+});
