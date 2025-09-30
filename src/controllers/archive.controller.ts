@@ -1,27 +1,22 @@
 // src/controllers/archive.controller.ts
 
 import { Request, Response, NextFunction } from 'express';
-import { 
-    archiveDiscussionsService,
-    getArchivedTopicsService,
-    getArchivedSubjectsService,
-    getArchivedDiscussionsService
-} from '../services/archive.service';
+import * as archiveService from '../services/archive.service';
 
 export const handleArchiveUpload = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const result = await archiveDiscussionsService(req);
+        // req sudah memiliki req.user dari middleware jwtAuth
+        const result = await archiveService.archiveDiscussionsService(req);
         res.status(201).json(result);
     } catch (error) {
         next(error);
     }
 };
 
-// --- HANDLER BARU UNTUK MENGAMBIL DATA ARSIP ---
-
 export const getArchivedTopics = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const topics = await getArchivedTopicsService();
+        const userId = req.user.userId; // Ambil ID pengguna
+        const topics = await archiveService.getArchivedTopicsService(userId); // Teruskan ID
         res.status(200).json(topics);
     } catch (error) {
         next(error);
@@ -30,8 +25,9 @@ export const getArchivedTopics = async (req: Request, res: Response, next: NextF
 
 export const getArchivedSubjects = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        const userId = req.user.userId; // Ambil ID pengguna
         const { topicName } = req.params;
-        const subjects = await getArchivedSubjectsService(topicName);
+        const subjects = await archiveService.getArchivedSubjectsService(userId, topicName); // Teruskan ID
         res.status(200).json(subjects);
     } catch (error) {
         next(error);
@@ -40,8 +36,9 @@ export const getArchivedSubjects = async (req: Request, res: Response, next: Nex
 
 export const getArchivedDiscussions = async (req: Request, res: Response, next: NextFunction) => {
     try {
+        const userId = req.user.userId; // Ambil ID pengguna
         const { topicName, subjectName } = req.params;
-        const discussions = await getArchivedDiscussionsService(topicName, subjectName);
+        const discussions = await archiveService.getArchivedDiscussionsService(userId, topicName, subjectName); // Teruskan ID
         res.status(200).json(discussions);
     } catch (error) {
         next(error);

@@ -4,24 +4,34 @@ import { Request } from 'express';
 import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
-import { rootPath } from '../config/path';
+import { getUserStoragePath } from '../config/path'; // Import helper path dinamis
 
+/**
+ * Fungsi utama yang menangani unggahan dan pemrosesan arsip.
+ * Logika diubah untuk beroperasi di dalam direktori spesifik pengguna.
+ */
 export const archiveDiscussionsService = async (req: Request) => {
     if (!req.file) {
         throw new Error('File arsip .zip tidak ditemukan dalam permintaan.');
     }
 
-    const archiveStorageDir = path.join(rootPath, 'storage', 'Archive_data');
-    // Sekarang uploadedFilePath akan memiliki nilai string yang valid
-    const uploadedFilePath = req.file.path; 
+    // Pastikan req.user ada dari middleware jwtAuth
+    if (!req.user || !req.user.userId) {
+        throw new Error('Autentikasi gagal, ID pengguna tidak ditemukan.');
+    }
+
+    const userId = req.user.userId;
+    // Dapatkan path arsip untuk pengguna yang sedang login
+    const userArchiveStorageDir = getUserStoragePath(userId, 'Archive_data');
+    const uploadedFilePath = req.file.path;
 
     try {
-        console.log('Menghapus data arsip lama...');
-        await fs.emptyDir(archiveStorageDir);
+        console.log(`Menghapus data arsip lama untuk user ID: ${userId}...`);
+        await fs.emptyDir(userArchiveStorageDir);
 
-        console.log(`Mengekstrak file baru: ${req.file.originalname}`);
+        console.log(`Mengekstrak file baru untuk user ID: ${userId}...`);
         const zip = new AdmZip(uploadedFilePath);
-        zip.extractAllTo(archiveStorageDir, /*overwrite*/ true);
+        zip.extractAllTo(userArchiveStorageDir, /*overwrite*/ true);
         
         console.log('Ekstraksi selesai.');
 
@@ -30,66 +40,75 @@ export const archiveDiscussionsService = async (req: Request) => {
             originalName: req.file.originalname,
         };
     } catch (error) {
-        console.error('Terjadi error selama proses arsip:', error);
-        await fs.emptyDir(archiveStorageDir);
+        console.error(`Terjadi error selama proses arsip untuk user ID ${userId}:`, error);
+        // Jika terjadi error, coba bersihkan direktori arsip pengguna untuk menghindari data korup
+        await fs.emptyDir(userArchiveStorageDir);
         throw new Error('Gagal memproses file arsip di server.');
     } finally {
-        // Baris ini sekarang akan berjalan dengan aman
+        // Selalu hapus file .zip temporer yang diunggah setelah selesai.
         await fs.remove(uploadedFilePath);
-        console.log('File .zip temporer telah dihapus.');
+        console.log(`File .zip temporer untuk user ID ${userId} telah dihapus.`);
     }
 };
 
-// ... sisa fungsi (getArchivedTopicsService, dll.) tidak perlu diubah ...
-const archiveTopicsPath = path.join(rootPath, 'storage', 'Archive_data', 'RSpace_data', 'topics');
 
-export const getArchivedTopicsService = async () => {
-    if (!await fs.pathExists(archiveTopicsPath)) {
+// --- FUNGSI PENGAMBILAN DATA SEKARANG MEMERLUKAN userId ---
+
+export const getArchivedTopicsService = async (userId: number) => {
+    const userTopicsPath = path.join(getUserStoragePath(userId, 'Archive_data'), 'RSpace_data', 'topics');
+    
+    if (!await fs.pathExists(userTopicsPath)) {
         return [];
     }
-    const topicDirs = await fs.readdir(archiveTopicsPath);
+    const topicDirs = await fs.readdir(userTopicsPath);
     const topicsData = [];
 
     for (const topicName of topicDirs) {
-        const topicConfigPath = path.join(archiveTopicsPath, topicName, 'topic_config.json');
-        if (await fs.pathExists(topicConfigPath)) {
-            const config = await fs.readJson(topicConfigPath);
-            topicsData.push({ name: topicName, ...config });
+        const topicDirFullPath = path.join(userTopicsPath, topicName);
+        const stats = await fs.stat(topicDirFullPath);
+        // Pastikan itu adalah direktori
+        if (stats.isDirectory()) {
+            const topicConfigPath = path.join(topicDirFullPath, 'topic_config.json');
+            if (await fs.pathExists(topicConfigPath)) {
+                const config = await fs.readJson(topicConfigPath);
+                topicsData.push({ name: topicName, ...config });
+            }
         }
     }
-    // Urutkan berdasarkan posisi
+    
     topicsData.sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
     return topicsData;
 };
 
-export const getArchivedSubjectsService = async (topicName: string) => {
-    const topicPath = path.join(archiveTopicsPath, topicName);
-    if (!await fs.pathExists(topicPath)) {
+export const getArchivedSubjectsService = async (userId: number, topicName: string) => {
+    const userTopicPath = path.join(getUserStoragePath(userId, 'Archive_data'), 'RSpace_data', 'topics', topicName);
+    
+    if (!await fs.pathExists(userTopicPath)) {
         throw new Error('Topik tidak ditemukan di arsip.');
     }
-    const files = await fs.readdir(topicPath);
+    const files = await fs.readdir(userTopicPath);
     const subjectsData = [];
 
     for (const fileName of files) {
         if (fileName.endsWith('.json') && fileName !== 'topic_config.json') {
-            const subjectJson = await fs.readJson(path.join(topicPath, fileName));
+            const subjectJson = await fs.readJson(path.join(userTopicPath, fileName));
             subjectsData.push({
                 name: path.basename(fileName, '.json'),
-                ...subjectJson.metadata
+                ...(subjectJson.metadata || {})
             });
         }
     }
-     // Urutkan berdasarkan posisi
+    
     subjectsData.sort((a, b) => (a.position ?? 999) - (b.position ?? 999));
     return subjectsData;
 };
 
-export const getArchivedDiscussionsService = async (topicName: string, subjectName: string) => {
-    const subjectPath = path.join(archiveTopicsPath, topicName, `${subjectName}.json`);
-    if (!await fs.pathExists(subjectPath)) {
+export const getArchivedDiscussionsService = async (userId: number, topicName: string, subjectName: string) => {
+    const userSubjectPath = path.join(getUserStoragePath(userId, 'Archive_data'), 'RSpace_data', 'topics', topicName, `${subjectName}.json`);
+    
+    if (!await fs.pathExists(userSubjectPath)) {
         throw new Error('Subjek tidak ditemukan di arsip.');
     }
-    const subjectJson = await fs.readJson(subjectPath);
-    // Asumsi diskusi tidak memiliki urutan spesifik di dalam arsip
+    const subjectJson = await fs.readJson(userSubjectPath);
     return subjectJson.content || [];
 };
