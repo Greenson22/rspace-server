@@ -20,17 +20,8 @@
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h1>🚀 RSpace</h1>
-        <div>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/profile">Profil</a>
-            <a href="/users" id="users-link">Kelola Pengguna</a>
-            <a href="/archive">Arsip</a>
-            <a href="/backups">Backup</a>
-            <a href="#" id="logout-btn">Logout</a>
-        </div>
-    </div>
+    <div id="navbar-placeholder"></div>
+
     <div class="container">
         <h2>Daftar Pengguna</h2>
         <table class="users-table">
@@ -47,73 +38,72 @@
         </table>
     </div>
 
+    <script src="/js/main.js"></script>
+
     <script>
-        const token = localStorage.getItem('rspace_token');
-        if (!token) { window.location.href = '/'; }
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('rspace_token');
+            if (!token) return;
 
-        const usersTbody = document.getElementById('users-tbody');
+            const usersTbody = document.getElementById('users-tbody');
 
-        function loadUsers() {
-            usersTbody.innerHTML = '<tr><td colspan="4">Memuat...</td></tr>';
-            fetch('/api/users', {
-                headers: { 'Authorization': 'Bearer ' + token }
-            })
-            .then(res => {
-                if (res.status === 403) {
-                    document.body.innerHTML = '<h1>403 - Akses Ditolak</h1><p>Hanya admin yang dapat mengakses halaman ini.</p>';
-                }
-                if (!res.ok) throw new Error('Gagal memuat pengguna');
-                return res.json();
-            })
-            .then(users => {
-                usersTbody.innerHTML = '';
-                users.forEach(user => {
-                    const tr = document.createElement('tr');
-                    tr.innerHTML = `
-                        <td>${user.id}</td>
-                        <td>${user.email}</td>
-                        <td>${new Date(user.createdAt).toLocaleString('id-ID')}</td>
-                        <td>
-                            ${user.id !== 1 ? `<a href="#" class="delete-btn" data-id="${user.id}">Hapus</a>` : 'Admin'}
-                        </td>
-                    `;
-                    usersTbody.appendChild(tr);
-                });
-            })
-            .catch(err => {
-                usersTbody.innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`;
-            });
-        }
-
-        // Event listener untuk tombol hapus
-        usersTbody.addEventListener('click', (event) => {
-            if (event.target.classList.contains('delete-btn')) {
-                const userId = event.target.dataset.id;
-                if (confirm(`Anda yakin ingin menghapus pengguna dengan ID ${userId}?`)) {
-                    fetch('/api/users/' + userId, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': 'Bearer ' + token }
-                    })
-                    .then(res => res.json())
-                    .then(data => {
-                        if (data.message) {
-                            alert(data.message);
-                            loadUsers();
-                        } else {
-                            alert('Gagal menghapus: ' + (data.message || 'Error tidak diketahui'));
-                        }
+            function loadUsers() {
+                usersTbody.innerHTML = '<tr><td colspan="4">Memuat...</td></tr>';
+                fetch('/api/users', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                .then(res => {
+                    if (res.status === 403) {
+                        document.querySelector('.container').innerHTML = '<h1>403 - Akses Ditolak</h1><p>Hanya admin yang dapat mengakses halaman ini.</p>';
+                        return null;
+                    }
+                    if (!res.ok) throw new Error('Gagal memuat pengguna');
+                    return res.json();
+                })
+                .then(users => {
+                    if (!users) return;
+                    usersTbody.innerHTML = '';
+                    users.forEach(user => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${user.id}</td>
+                            <td>${user.email}</td>
+                            <td>${new Date(user.createdAt).toLocaleString('id-ID')}</td>
+                            <td>
+                                ${user.id !== 1 ? `<a href="#" class="delete-btn" data-id="${user.id}">Hapus</a>` : 'Admin'}
+                            </td>
+                        `;
+                        usersTbody.appendChild(tr);
                     });
-                }
+                })
+                .catch(err => {
+                    usersTbody.innerHTML = `<tr><td colspan="4" style="color: red;">${err.message}</td></tr>`;
+                });
             }
-        });
 
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('rspace_token');
-            window.location.href = '/';
-        });
+            usersTbody.addEventListener('click', (event) => {
+                if (event.target.classList.contains('delete-btn')) {
+                    const userId = event.target.dataset.id;
+                    if (confirm(`Anda yakin ingin menghapus pengguna dengan ID ${userId}?`)) {
+                        fetch('/api/users/' + userId, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': 'Bearer ' + token }
+                        })
+                        .then(res => res.json())
+                        .then(data => {
+                            if (data.message) {
+                                alert(data.message);
+                                loadUsers();
+                            } else {
+                                alert('Gagal menghapus: ' + (data.message || 'Error tidak diketahui'));
+                            }
+                        });
+                    }
+                }
+            });
 
-        // Muat pengguna saat halaman dibuka
-        loadUsers();
+            loadUsers();
+        });
     </script>
 </body>
 </html>

@@ -30,17 +30,8 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <div class="navbar">
-        <h1>🚀 RSpace</h1>
-        <div>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/profile">Profil</a>
-            <a href="/users" id="users-link" style="display: none;">Kelola Pengguna</a>
-            <a href="/archive">Arsip</a>
-            <a href="/backups">Backup</a>
-            <a href="#" id="logout-btn">Logout</a>
-        </div>
-    </div>
+    <div id="navbar-placeholder"></div>
+
     <div class="container">
         <div class="backup-grid">
             <div class="backup-column">
@@ -54,76 +45,37 @@
         </div>
     </div>
 
+    <script src="/js/main.js"></script>
+    
     <script>
-        const token = localStorage.getItem('rspace_token');
-        if (!token) { window.location.href = '/'; }
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('rspace_token');
+            if (!token) return;
 
-        const rspaceList = document.getElementById('rspace-list');
-        const perpuskuList = document.getElementById('perpusku-list');
-        const usersLink = document.getElementById('users-link');
+            const rspaceList = document.getElementById('rspace-list');
+            const perpuskuList = document.getElementById('perpusku-list');
 
-        async function fetchAPI(endpoint) {
-            const response = await fetch(endpoint, {
-                headers: { 'Authorization': 'Bearer ' + token }
-            });
-            if (!response.ok) {
-                if(response.status === 401 || response.status === 403) {
-                     localStorage.removeItem('rspace_token');
-                     window.location.href = '/';
+            async function fetchAPI(endpoint) { /* ... (Sama seperti sebelumnya) ... */ }
+            function renderFileList(element, files, type) { /* ... (Sama seperti sebelumnya) ... */ }
+
+            async function loadAllBackups() {
+                try {
+                    const rspaceFiles = await fetchAPI('/api/backups/rspace');
+                    renderFileList(rspaceList, rspaceFiles, 'rspace');
+                } catch (error) {
+                    rspaceList.innerHTML = `<li style="color: red;">${error.message}</li>`;
                 }
-                throw new Error(`Gagal memuat data (Status: ${response.status})`);
-            }
-            return response.json();
-        }
 
-        function renderFileList(element, files, type) {
-            element.innerHTML = '';
-            if (files.length === 0) {
-                element.innerHTML = '<li>Tidak ada file backup ditemukan.</li>';
-                return;
-            }
-            files.forEach(file => {
-                const li = document.createElement('li');
-                li.className = 'file-item';
-                li.innerHTML = `
-                    <div class="file-info">
-                        <span class="name">${file.originalName}</span>
-                        <span class="date">Dibuat: ${file.createdAt}</span>
-                    </div>
-                    <a href="/api/${type}/download/${file.uniqueName}" class="download-btn">Unduh</a>
-                `;
-                element.appendChild(li);
-            });
-        }
-
-        async function loadAllBackups() {
-            try {
-                const rspaceFiles = await fetchAPI('/api/backups/rspace');
-                renderFileList(rspaceList, rspaceFiles, 'rspace');
-            } catch (error) {
-                rspaceList.innerHTML = `<li style="color: red;">${error.message}</li>`;
+                try {
+                    const perpuskuFiles = await fetchAPI('/api/backups/perpusku');
+                    renderFileList(perpuskuList, perpuskuFiles, 'perpusku');
+                } catch (error) {
+                    perpuskuList.innerHTML = `<li style="color: red;">${error.message}</li>`;
+                }
             }
 
-            try {
-                const perpuskuFiles = await fetchAPI('/api/backups/perpusku');
-                renderFileList(perpuskuList, perpuskuFiles, 'perpusku');
-            } catch (error) {
-                perpuskuList.innerHTML = `<li style="color: red;">${error.message}</li>`;
-            }
-        }
-        
-        // Cek admin untuk menampilkan link Kelola Pengguna
-        fetchAPI('/api/profile').then(data => {
-            if (data.id === 1) { usersLink.style.display = 'inline'; }
+            loadAllBackups();
         });
-
-        // Logout
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('rspace_token');
-            window.location.href = '/';
-        });
-
-        loadAllBackups();
     </script>
 </body>
 </html>

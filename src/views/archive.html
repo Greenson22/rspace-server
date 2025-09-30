@@ -31,162 +31,142 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
 </head>
 <body>
-    <div class="navbar">
-        <h1>🚀 RSpace</h1>
-        <div>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/profile">Profil</a>
-            <a href="/users" id="users-link" style="display: none;">Kelola Pengguna</a>
-            <a href="/archive">Arsip</a>
-            <a href="/backups">Backup</a>
-            <a href="#" id="logout-btn">Logout</a>
-        </div>
-    </div>
+    <div id="navbar-placeholder"></div>
+
     <div class="container">
         <h2>Jelajahi Arsip Diskusi</h2>
         <ul id="archive-root" class="archive-tree">
             </ul>
     </div>
 
+    <script src="/js/main.js"></script>
+    
     <script>
-        const token = localStorage.getItem('rspace_token');
-        if (!token) { window.location.href = '/'; }
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('rspace_token');
+            if (!token) return; // Dijaga oleh main.js, tapi pengecekan tambahan tidak masalah
 
-        const archiveRoot = document.getElementById('archive-root');
-        const usersLink = document.getElementById('users-link');
+            const archiveRoot = document.getElementById('archive-root');
 
-        // Fungsi umum untuk fetch API
-        async function fetchAPI(endpoint) {
-            const response = await fetch(endpoint, {
-                headers: { 'Authorization': 'Bearer ' + token }
+            // Fungsi helper khusus untuk halaman ini
+            async function fetchAPI(endpoint) {
+                const response = await fetch(endpoint, {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                });
+                if (!response.ok) {
+                    throw new Error(`Gagal memuat data (Status: ${response.status})`);
+                }
+                return response.json();
+            }
+
+            // Fungsi untuk memuat Topik
+            async function loadTopics() {
+                archiveRoot.innerHTML = '<li class="loading">Memuat topik...</li>';
+                try {
+                    const topics = await fetchAPI('/api/archive/topics');
+                    archiveRoot.innerHTML = '';
+                    if (topics.length === 0) {
+                        archiveRoot.innerHTML = '<li>Arsip kosong.</li>';
+                        return;
+                    }
+                    topics.forEach(topic => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div class="tree-item topic" data-type="topic" data-name="${topic.name}">
+                                <i class="fas fa-folder"></i>
+                                <span>${topic.name}</span>
+                            </div>
+                            <ul class="children" id="topic-${topic.name}"></ul>
+                        `;
+                        archiveRoot.appendChild(li);
+                    });
+                } catch (error) {
+                    archiveRoot.innerHTML = `<li class="error">${error.message}</li>`;
+                }
+            }
+
+            // Fungsi untuk memuat Subjek
+            async function loadSubjects(topicName, targetUl) {
+                if (targetUl.dataset.loaded === 'true') return;
+                targetUl.innerHTML = '<li class="loading">Memuat subjek...</li>';
+                try {
+                    const subjects = await fetchAPI(`/api/archive/topics/${topicName}/subjects`);
+                    targetUl.innerHTML = '';
+                    if (subjects.length === 0) {
+                        targetUl.innerHTML = '<li>Tidak ada subjek.</li>';
+                    }
+                    subjects.forEach(subject => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div class="tree-item subject" data-type="subject" data-topic="${topicName}" data-name="${subject.name}">
+                                <i class="fas fa-file-alt"></i>
+                                <span>${subject.name}</span>
+                            </div>
+                            <ul class="children" id="subject-${topicName}-${subject.name}"></ul>
+                        `;
+                        targetUl.appendChild(li);
+                    });
+                    targetUl.dataset.loaded = 'true';
+                } catch (error) {
+                    targetUl.innerHTML = `<li class="error">${error.message}</li>`;
+                }
+            }
+            
+            // Fungsi untuk memuat Diskusi
+            async function loadDiscussions(topicName, subjectName, targetUl) {
+                if (targetUl.dataset.loaded === 'true') return;
+                targetUl.innerHTML = '<li class="loading">Memuat diskusi...</li>';
+                try {
+                    const discussions = await fetchAPI(`/api/archive/topics/${topicName}/subjects/${subjectName}/discussions`);
+                    targetUl.innerHTML = '';
+                    if (discussions.length === 0) {
+                        targetUl.innerHTML = '<li>Tidak ada diskusi.</li>';
+                    }
+                    discussions.forEach(discussion => {
+                        const li = document.createElement('li');
+                        li.innerHTML = `
+                            <div class="tree-item discussion">
+                               <i class="fas fa-comment-dots"></i>
+                               <span>${discussion.discussion}</span>
+                            </div>
+                        `;
+                        targetUl.appendChild(li);
+                    });
+                    targetUl.dataset.loaded = 'true';
+                } catch (error) {
+                    targetUl.innerHTML = `<li class="error">${error.message}</li>`;
+                }
+            }
+            
+            // Event listener untuk semua klik di pohon arsip
+            archiveRoot.addEventListener('click', (event) => {
+                const target = event.target.closest('.tree-item');
+                if (!target) return;
+
+                const childrenUl = target.nextElementSibling;
+                if (!childrenUl || childrenUl.tagName !== 'UL') return;
+
+                const type = target.dataset.type;
+                const name = target.dataset.name;
+                const topicName = target.dataset.topic;
+
+                childrenUl.classList.toggle('visible');
+                const icon = target.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-folder-open');
+                    icon.classList.toggle('fa-folder');
+                }
+
+                if (type === 'topic') {
+                    loadSubjects(name, childrenUl);
+                } else if (type === 'subject') {
+                    loadDiscussions(topicName, name, childrenUl);
+                }
             });
-            if (!response.ok) {
-                if(response.status === 401 || response.status === 403) {
-                     localStorage.removeItem('rspace_token');
-                     window.location.href = '/';
-                }
-                throw new Error(`Gagal memuat data (Status: ${response.status})`);
-            }
-            return response.json();
-        }
 
-        // 1. Muat Topik saat halaman dibuka
-        async function loadTopics() {
-            archiveRoot.innerHTML = '<li class="loading">Memuat topik...</li>';
-            try {
-                const topics = await fetchAPI('/api/archive/topics');
-                archiveRoot.innerHTML = ''; // Bersihkan loading
-                if (topics.length === 0) {
-                     archiveRoot.innerHTML = '<li>Arsip kosong.</li>';
-                     return;
-                }
-                topics.forEach(topic => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="tree-item topic" data-type="topic" data-name="${topic.name}" data-loaded="false">
-                            <i class="fas fa-folder"></i>
-                            <span>${topic.name}</span>
-                        </div>
-                        <ul class="children" id="topic-${topic.name}"></ul>
-                    `;
-                    archiveRoot.appendChild(li);
-                });
-            } catch (error) {
-                archiveRoot.innerHTML = `<li class="error">${error.message}</li>`;
-            }
-        }
-
-        // 2. Muat Subjek saat Topik diklik
-        async function loadSubjects(topicName, targetUl) {
-            if (targetUl.dataset.loaded === 'true') return; // Jangan muat ulang jika sudah ada
-            targetUl.innerHTML = '<li class="loading">Memuat subjek...</li>';
-            try {
-                const subjects = await fetchAPI(`/api/archive/topics/${topicName}/subjects`);
-                targetUl.innerHTML = '';
-                if (subjects.length === 0) {
-                     targetUl.innerHTML = '<li>Tidak ada subjek.</li>';
-                }
-                subjects.forEach(subject => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="tree-item subject" data-type="subject" data-topic="${topicName}" data-name="${subject.name}" data-loaded="false">
-                            <i class="fas fa-file-alt"></i>
-                            <span>${subject.name}</span>
-                        </div>
-                        <ul class="children" id="subject-${topicName}-${subject.name}"></ul>
-                    `;
-                    targetUl.appendChild(li);
-                });
-                targetUl.dataset.loaded = 'true';
-            } catch (error) {
-                targetUl.innerHTML = `<li class="error">${error.message}</li>`;
-            }
-        }
-        
-        // 3. Muat Diskusi saat Subjek diklik
-        async function loadDiscussions(topicName, subjectName, targetUl) {
-            if (targetUl.dataset.loaded === 'true') return;
-            targetUl.innerHTML = '<li class="loading">Memuat diskusi...</li>';
-            try {
-                const discussions = await fetchAPI(`/api/archive/topics/${topicName}/subjects/${subjectName}/discussions`);
-                targetUl.innerHTML = '';
-                 if (discussions.length === 0) {
-                     targetUl.innerHTML = '<li>Tidak ada diskusi.</li>';
-                }
-                discussions.forEach(discussion => {
-                    const li = document.createElement('li');
-                    li.innerHTML = `
-                        <div class="tree-item discussion">
-                           <i class="fas fa-comment-dots"></i>
-                           <span>${discussion.discussion}</span>
-                        </div>
-                    `;
-                    targetUl.appendChild(li);
-                });
-                targetUl.dataset.loaded = 'true';
-            } catch (error) {
-                targetUl.innerHTML = `<li class="error">${error.message}</li>`;
-            }
-        }
-        
-        // Event listener utama untuk semua klik di pohon arsip
-        archiveRoot.addEventListener('click', (event) => {
-            const target = event.target.closest('.tree-item');
-            if (!target) return;
-
-            const childrenUl = target.nextElementSibling;
-            if (!childrenUl || childrenUl.tagName !== 'UL') return;
-
-            const type = target.dataset.type;
-            const name = target.dataset.name;
-            const topicName = target.dataset.topic;
-
-            // Toggle tampilan
-            childrenUl.classList.toggle('visible');
-            target.querySelector('i').classList.toggle('fa-folder-open');
-            target.querySelector('i').classList.toggle('fa-folder');
-
-            // Ambil data jika belum dimuat
-            if (type === 'topic') {
-                loadSubjects(name, childrenUl);
-            } else if (type === 'subject') {
-                loadDiscussions(topicName, name, childrenUl);
-            }
+            // Panggil fungsi inisialisasi
+            loadTopics();
         });
-
-        // Cek admin untuk menampilkan link Kelola Pengguna
-        fetchAPI('/api/profile').then(data => {
-            if (data.id === 1) { usersLink.style.display = 'inline'; }
-        });
-        
-        // Fungsi Logout
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('rspace_token');
-            window.location.href = '/';
-        });
-
-        // Panggil fungsi inisialisasi
-        loadTopics();
     </script>
 </body>
 </html>

@@ -19,52 +19,40 @@
     </style>
 </head>
 <body>
-    <div class="navbar">
-        <h1>🚀 RSpace</h1>
-        <div>
-            <a href="/dashboard">Dashboard</a>
-            <a href="/profile">Profil</a>
-            <a href="/users" id="users-link" style="display: none;">Kelola Pengguna</a>
-            <a href="/archive">Arsip</a>
-            <a href="/backups">Backup</a>
-            <a href="#" id="logout-btn">Logout</a>
-        </div>
-    </div>
+    <div id="navbar-placeholder"></div>
+
     <div class="container">
         <div class="profile-card">
             <h2>Profil Saya</h2>
-            <p><strong>ID Pengguna:</strong> <span id="user-id"></span></p>
-            <p><strong>Email:</strong> <span id="user-email"></span></p>
-            <p><strong>Akun Dibuat:</strong> <span id="user-created"></span></p>
+            <p><strong>ID Pengguna:</strong> <span id="user-id">Memuat...</span></p>
+            <p><strong>Email:</strong> <span id="user-email">Memuat...</span></p>
+            <p><strong>Akun Dibuat:</strong> <span id="user-created">Memuat...</span></p>
         </div>
     </div>
 
+    <script src="/js/main.js"></script>
+    
     <script>
-        const token = localStorage.getItem('rspace_token');
-        const usersLink = document.getElementById('users-link');
-        if (!token) { window.location.href = '/'; }
+        document.addEventListener('DOMContentLoaded', () => {
+            const token = localStorage.getItem('rspace_token');
+            if (!token) return;
 
-        fetch('/api/profile', {
-            headers: { 'Authorization': 'Bearer ' + token }
-        })
-        .then(res => {
-            if (!res.ok) throw new Error('Gagal memuat profil');
-            return res.json();
-        })
-        .then(data => {
-            document.getElementById('user-id').innerText = data.id;
-            document.getElementById('user-email').innerText = data.email;
-            document.getElementById('user-created').innerText = new Date(data.createdAt).toLocaleString('id-ID');
-            if (data.id === 1) { usersLink.style.display = 'inline'; }
-        })
-        .catch(() => {
-            localStorage.removeItem('rspace_token');
-            window.location.href = '/';
-        });
-
-        document.getElementById('logout-btn').addEventListener('click', () => {
-            localStorage.removeItem('rspace_token');
-            window.location.href = '/';
+            fetch('/api/profile', {
+                headers: { 'Authorization': 'Bearer ' + token }
+            })
+            .then(res => {
+                if (!res.ok) throw new Error('Gagal memuat profil');
+                return res.json();
+            })
+            .then(data => {
+                document.getElementById('user-id').innerText = data.id;
+                document.getElementById('user-email').innerText = data.email;
+                document.getElementById('user-created').innerText = new Date(data.createdAt).toLocaleString('id-ID');
+            })
+            .catch(error => {
+                console.error(error);
+                document.querySelector('.profile-card').innerHTML = `<p style="color: red;">Gagal memuat profil.</p>`;
+            });
         });
     </script>
 </body>
