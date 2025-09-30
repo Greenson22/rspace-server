@@ -7,39 +7,35 @@ import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
 import { MulterError } from 'multer';
 
-// ... (sisa import-import tidak berubah) ...
-// RSpace Routes
+// Impor Database Service (agar inisialisasi berjalan)
+import './services/database.service'; 
+
+// Rute
+import authRoutes from './routes/auth.routes'; // <-- Impor rute auth
 import rspaceUploadRoutes from './routes/rspace_upload.routes';
 import rspaceDownloadRoutes from './routes/rspace_download.routes';
 import rspaceFileRoutes from './routes/rspace_file.routes';
-
-// PerpusKu Routes
 import perpuskuUploadRoutes from './routes/perpusku_upload.routes';
 import perpuskuDownloadRoutes from './routes/perpusku_download.routes';
 import perpuskuFileRoutes from './routes/perpusku_file.routes';
-
-// Discussion Routes (diganti namanya agar lebih jelas)
 import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
 import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
-
-// Archive Routes
 import archiveRoutes from './routes/archive.routes';
 
-import { apiKeyAuth } from './middleware/auth.middleware';
-
+// Middleware
+import { jwtAuth } from './middleware/jwt.middleware'; // <-- Impor middleware JWT baru
+// import { apiKeyAuth } from './middleware/auth.middleware'; // <-- Hapus atau komentari middleware lama
 
 const app = express();
 const PORT = 3000;
 
-// Middleware
+// Middleware global
 app.use(cors());
 app.use(express.json());
 
-
-// ==========================================================
-// == AWAL DARI KODE YANG DIPERBARUI UNTUK ENDPOINT ROOT ==
-// ==========================================================
+// Halaman utama
 app.get('/', (req: Request, res: Response) => {
+    // ... (kode halaman utama tidak berubah) ...
     const now = new Date();
     const timeString = now.toLocaleString('id-ID', {
         timeZone: 'Asia/Makassar',
@@ -109,36 +105,33 @@ app.get('/', (req: Request, res: Response) => {
         </html>
     `);
 });
-// ==========================================================
-// == AKHIR DARI KODE YANG DIPERBARUI ==
-// ==========================================================
 
+// Gunakan Rute Autentikasi (tanpa middleware keamanan)
+app.use('/api', authRoutes);
 
-// Terapkan Middleware Keamanan
-app.use('/api', apiKeyAuth);
+// Terapkan Middleware Keamanan JWT untuk semua rute di bawah ini
+app.use('/api', jwtAuth);
 
-// ... (sisa kode tidak berubah) ...
-// Gunakan Rute RSpace
+// Gunakan Rute-Rute yang Dilindungi
 app.use('/api/rspace', rspaceUploadRoutes);
 app.use('/api/rspace', rspaceDownloadRoutes);
 app.use('/api/rspace', rspaceFileRoutes);
-
-// Gunakan Rute PerpusKu
 app.use('/api/perpusku', perpuskuUploadRoutes);
 app.use('/api/perpusku', perpuskuDownloadRoutes);
 app.use('/api/perpusku', perpuskuFileRoutes);
-
-// Gunakan Rute Discussion (nama lama, bisa dihapus jika tidak dipakai lagi)
 app.use('/api/discussion', finishedDiscussionUploadRoutes);
 app.use('/api/discussion', finishedDiscussionFileRoutes);
-
-// Gunakan Rute Archive
 app.use('/api/archive', archiveRoutes);
 
-
-// Penanganan Error Global
+// ... (Penanganan Error Global tidak berubah) ...
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
+
+    // ## MODIFIKASI KECIL PADA PENANGANAN ERROR ##
+    // Tambahkan penanganan untuk error spesifik dari service auth
+    if (err.message === 'Email sudah terdaftar.' || err.message === 'Email atau password salah.') {
+        return res.status(400).json({ type: 'AuthError', message: err.message });
+    }
 
     if (err instanceof MulterError) {
         return res.status(400).json({
@@ -155,7 +148,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
         error: isDevelopment ? { message: err.message, stack: err.stack } : undefined,
     });
 });
-
 
 app.listen(PORT, () => {
     console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
