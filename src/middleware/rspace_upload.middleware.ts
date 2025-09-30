@@ -1,86 +1,78 @@
+// src/middleware/rspace_upload.middleware.ts
+
 import multer from 'multer';
 import path from 'path';
-import fs from 'fs';
+import fs from 'fs-extra';
 import { Request } from 'express';
-import { rootPath } from '../config/path';
 import { v4 as uuidv4 } from 'uuid';
-
-// Tentukan dan buat folder penyimpanan jika belum ada
-const uploadDir = path.join(rootPath, 'storage', 'RSpace_data');
-fs.mkdirSync(uploadDir, { recursive: true });
-
-// Tentukan path untuk file metadata
-const metadataPath = path.join(uploadDir, 'metadata.json');
+import { getUserStoragePath } from '../config/path'; // <-- Import helper path
 
 // Interface untuk struktur metadata
 interface FileMetadata {
     uniqueName: string;
     originalName: string;
-    createdAt: number; // Timestamp dalam milidetik
+    createdAt: number;
 }
 
-// Fungsi untuk memperbarui metadata
-const updateMetadata = (uniqueName: string, originalName: string) => {
+// Fungsi untuk memperbarui metadata di dalam folder pengguna
+const updateMetadata = async (userId: number, uniqueName: string, originalName: string) => {
     try {
+        const userRspacePath = getUserStoragePath(userId, 'RSpace_data');
+        const metadataPath = path.join(userRspacePath, 'metadata.json');
+        
         let metadata: FileMetadata[] = [];
-        // Baca file metadata jika sudah ada
-        if (fs.existsSync(metadataPath)) {
-            const fileContent = fs.readFileSync(metadataPath, 'utf-8');
-            metadata = fileContent ? JSON.parse(fileContent) : [];
+        if (await fs.pathExists(metadataPath)) {
+            metadata = await fs.readJson(metadataPath);
         }
 
         // Hapus file terlama jika sudah ada 5 file atau lebih
         if (metadata.length >= 5) {
-            // Urutkan berdasarkan waktu pembuatan (yang paling lama di awal)
             metadata.sort((a, b) => a.createdAt - b.createdAt);
-            const oldestFile = metadata.shift(); // Ambil dan hapus elemen pertama
+            const oldestFile = metadata.shift(); 
 
             if (oldestFile) {
-                const filePath = path.join(uploadDir, oldestFile.uniqueName);
-                if (fs.existsSync(filePath)) {
-                    fs.unlinkSync(filePath); // Hapus file fisik
-                    console.log(`File terlama dihapus: ${oldestFile.originalName}`);
+                const filePath = path.join(userRspacePath, oldestFile.uniqueName);
+                if (await fs.pathExists(filePath)) {
+                    await fs.remove(filePath);
+                    console.log(`File RSpace terlama untuk user ${userId} dihapus: ${oldestFile.originalName}`);
                 }
             }
         }
 
-        // Tambahkan entri baru dengan timestamp
-        metadata.push({
-            uniqueName,
-            originalName,
-            createdAt: Date.now(),
-        });
-
-        // Tulis kembali ke file
-        fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+        metadata.push({ uniqueName, originalName, createdAt: Date.now() });
+        await fs.writeJson(metadataPath, metadata, { spaces: 2 });
 
     } catch (error) {
-        console.error('Gagal memperbarui metadata.json:', error);
-        // Jika metadata krusial, Anda bisa melempar error di sini
+        console.error(`Gagal memperbarui metadata RSpace untuk user ${userId}:`, error);
     }
 };
 
-
-// Konfigurasi penyimpanan file
 const storage = multer.diskStorage({
     destination: (req: Request, file: Express.Multer.File, cb) => {
-        cb(null, uploadDir);
+        const userId = req.user?.userId;
+        if (!userId) {
+            return cb(new Error('Autentikasi gagal, ID pengguna tidak ditemukan.'), '');
+        }
+        // Simpan file ke direktori RSpace milik pengguna
+        const userRspacePath = getUserStoragePath(userId, 'RSpace_data');
+        cb(null, userRspacePath);
     },
     filename: (req: Request, file: Express.Multer.File, cb) => {
-        // Hanya izinkan file .zip
         if (!file.originalname.match(/\.zip$/)) {
             return cb(new Error('Hanya file .zip yang diizinkan!'), '');
         }
+        const userId = req.user?.userId;
+        if (!userId) {
+            return cb(new Error('Autentikasi gagal, ID pengguna tidak ditemukan.'), '');
+        }
 
-        // Buat nama file unik menggunakan uuid
         const newFilename = `${uuidv4()}${path.extname(file.originalname)}`;
         
-        // Panggil fungsi untuk memperbarui metadata
-        updateMetadata(newFilename, file.originalname);
+        // Update metadata setelah nama file dibuat
+        updateMetadata(userId, newFilename, file.originalname);
 
         cb(null, newFilename);
     }
 });
 
-// Buat instance multer middleware
 export const upload = multer({ storage: storage });
