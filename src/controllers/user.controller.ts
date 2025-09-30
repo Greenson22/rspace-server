@@ -2,8 +2,9 @@
 
 import { Request, Response, NextFunction } from 'express';
 import * as userService from '../services/user.service';
+import path from 'path';
+import { rootPath } from '../config/path';
 
-// ... (getUserProfile, getAllUsers, deleteUser tidak berubah) ...
 export const getUserProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user.userId;
@@ -13,6 +14,7 @@ export const getUserProfile = async (req: Request, res: Response, next: NextFunc
         next(error);
     }
 };
+
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const users = await userService.findAllUsers();
@@ -21,6 +23,7 @@ export const getAllUsers = async (req: Request, res: Response, next: NextFunctio
         next(error);
     }
 };
+
 export const deleteUser = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userIdToDelete = parseInt(req.params.id, 10);
@@ -34,13 +37,37 @@ export const deleteUser = async (req: Request, res: Response, next: NextFunction
     }
 };
 
-// CONTROLLER BARU
 export const updateProfile = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const userId = req.user.userId;
         const { name, birth_date, bio } = req.body;
         const result = await userService.updateUserProfile(userId, name, birth_date, bio);
         res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// CONTROLLER BARU UNTUK UPLOAD FOTO PROFIL
+export const uploadProfilePicture = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Tidak ada file gambar yang diunggah.' });
+        }
+
+        const userId = req.user.userId;
+        
+        // Buat path relatif yang akan disimpan di DB dan digunakan di frontend
+        // Contoh: /storage/user_1/profile_pictures/profile-12345.jpg
+        const relativePath = path.join('/storage', `user_${userId}`, 'profile_pictures', req.file.filename);
+
+        await userService.updateUserPicturePath(userId, relativePath);
+
+        res.status(200).json({ 
+            message: 'Foto profil berhasil diunggah.',
+            filePath: relativePath 
+        });
+
     } catch (error) {
         next(error);
     }

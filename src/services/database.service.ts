@@ -27,6 +27,7 @@ const initializeDb = () => {
                 name TEXT,
                 birth_date TEXT,
                 bio TEXT,
+                profile_picture_path TEXT, -- KOLOM BARU DITAMBAHKAN
                 createdAt TEXT NOT NULL
             )
         `;

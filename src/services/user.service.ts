@@ -8,13 +8,14 @@ interface UserProfile {
     name: string | null;
     birth_date: string | null;
     bio: string | null;
+    profile_picture_path?: string; // Jadikan opsional
     createdAt: string;
 }
 
 export const findUserById = (id: number): Promise<UserProfile> => {
     return new Promise((resolve, reject) => {
-        // PERBARUI SQL SELECT
-        const sql = 'SELECT id, email, name, birth_date, bio, createdAt FROM users WHERE id = ?';
+        // PERBARUI SQL SELECT untuk mengambil path gambar
+        const sql = 'SELECT id, email, name, birth_date, bio, profile_picture_path, createdAt FROM users WHERE id = ?';
         db.get(sql, [id], (err, row: UserProfile) => {
             if (err) {
                 return reject(new Error('Error server saat mencari pengguna.'));
@@ -29,7 +30,6 @@ export const findUserById = (id: number): Promise<UserProfile> => {
 
 export const findAllUsers = (): Promise<UserProfile[]> => {
     return new Promise((resolve, reject) => {
-        // PERBARUI SQL SELECT
         const sql = 'SELECT id, email, name, createdAt FROM users';
         db.all(sql, [], (err, rows: UserProfile[]) => {
             if (err) {
@@ -40,7 +40,6 @@ export const findAllUsers = (): Promise<UserProfile[]> => {
     });
 };
 
-// ... (deleteUserById tidak berubah) ...
 export const deleteUserById = (id: number): Promise<{ message: string }> => {
     return new Promise((resolve, reject) => {
         const sql = 'DELETE FROM users WHERE id = ?';
@@ -56,8 +55,6 @@ export const deleteUserById = (id: number): Promise<{ message: string }> => {
     });
 };
 
-
-// FUNGSI BARU UNTUK UPDATE PROFIL
 export const updateUserProfile = (id: number, name: string, birth_date: string, bio: string): Promise<{ message: string }> => {
     return new Promise((resolve, reject) => {
         const sql = 'UPDATE users SET name = ?, birth_date = ?, bio = ? WHERE id = ?';
@@ -66,6 +63,19 @@ export const updateUserProfile = (id: number, name: string, birth_date: string, 
                 return reject(new Error('Gagal memperbarui profil.'));
             }
             resolve({ message: 'Profil berhasil diperbarui.' });
+        });
+    });
+};
+
+// FUNGSI BARU UNTUK UPDATE PATH FOTO PROFIL
+export const updateUserPicturePath = (id: number, filePath: string): Promise<{ message: string }> => {
+    return new Promise((resolve, reject) => {
+        const sql = 'UPDATE users SET profile_picture_path = ? WHERE id = ?';
+        db.run(sql, [filePath, id], function(err) {
+            if (err) {
+                return reject(new Error('Gagal memperbarui foto profil di database.'));
+            }
+            resolve({ message: 'Foto profil berhasil diperbarui.' });
         });
     });
 };
