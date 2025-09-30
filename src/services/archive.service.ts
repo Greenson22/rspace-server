@@ -1,12 +1,12 @@
 // src/services/archive.service.ts
 
 import { Request } from 'express';
-import fs from 'fs-extra'; // <-- Gunakan fs-extra yang sudah diinstal
+import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
 import { rootPath } from '../config/path';
 
-// Definisikan interface untuk struktur data diskusi agar lebih aman
+// ... (Interface Discussion dan SubjectJson tetap sama) ...
 interface Discussion {
     discussion: string;
     // tambahkan properti lain jika perlu untuk validasi
@@ -17,32 +17,33 @@ interface SubjectJson {
     content: Discussion[];
 }
 
-/**
- * Fungsi utama yang menangani unggahan dan pemrosesan arsip.
- */
+
+// ... (Fungsi archiveDiscussionsService tetap sama) ...
 export const archiveDiscussionsService = async (req: Request) => {
     if (!req.file) {
         throw new Error('File arsip .zip tidak ditemukan dalam permintaan.');
     }
 
     const uploadDir = path.join(rootPath, 'storage', 'Archive_data');
-    
-    // ## PERBAIKAN: Hapus variabel tempFilePath yang tidak perlu ##
-    // const tempFilePath = req.file.path; 
-    
     const targetFilename = 'FinishedDiscussionsArchive.zip';
     const targetFilePath = path.join(uploadDir, targetFilename);
     const extractDir = path.join(uploadDir, 'extracted');
 
-    // Pastikan direktori utama ada
     await fs.ensureDir(uploadDir);
 
-    // ## PERBAIKAN: Baris ini tidak lagi diperlukan dan telah dihapus ##
-    // await fs.move(tempFilePath, targetFilePath, { overwrite: true });
+    // ... (sisa logika upload tidak berubah)
+    if (await fs.pathExists(targetFilePath)) {
+        const now = new Date();
+        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+        const archiveBackupFilename = `Archive_backup_${timestamp}.zip`;
+        const archiveBackupPath = path.join(uploadDir, archiveBackupFilename);
+        
+        await fs.rename(targetFilePath, archiveBackupPath);
+        console.log(`Arsip lama disimpan sebagai: ${archiveBackupFilename}`);
+    }
 
-    // --- LOGIKA BARU: EKSTRAK DAN GABUNGKAN SECARA CERDAS ---
+    await fs.move(req.file.path, targetFilePath, { overwrite: true });
 
-    // 1. Ekstrak ke folder temporer 'extracted'
     await fs.ensureDir(extractDir);
     try {
         const zip = new AdmZip(targetFilePath);
@@ -53,7 +54,6 @@ export const archiveDiscussionsService = async (req: Request) => {
         throw new Error('File berhasil diunggah, tetapi gagal diekstrak di server.');
     }
 
-    // 2. Lakukan proses penggabungan
     const sourceRspaceDir = path.join(extractDir, 'RSpace_data', 'topics');
     const destRspaceDir = path.join(uploadDir, 'RSpace_data', 'topics');
     
@@ -65,13 +65,9 @@ export const archiveDiscussionsService = async (req: Request) => {
         await mergeTopicData(sourceRspaceDir, destRspaceDir, sourcePerpuskuDir, destPerpuskuDir);
     }
 
-    // 3. Hapus folder 'extracted' setelah selesai
     await fs.remove(extractDir);
     console.log('Folder ekstraksi temporer telah dihapus.');
     
-    // --- AKHIR DARI LOGIKA BARU ---
-    
-    // Logika pembaruan metadata (tidak berubah)
     const metadataPath = path.join(uploadDir, 'metadata.json');
     const metadata = {
         lastUploadedAt: new Date().toISOString(),
@@ -79,7 +75,7 @@ export const archiveDiscussionsService = async (req: Request) => {
             timeZone: 'Asia/Makassar'
         })
     };
-    await fs.writeJson(metadataPath, metadata, { spaces: 2 });
+    await fs.writeJson(metadataPath, { spaces: 2 });
 
     return {
         message: 'Arsip berhasil diunggah dan digabungkan di server!',
@@ -89,9 +85,58 @@ export const archiveDiscussionsService = async (req: Request) => {
     };
 };
 
-/**
- * Menggabungkan data dari direktori sumber ke tujuan.
- */
+
+// --- FUNGSI BARU UNTUK MENGAMBIL DATA ARSIP ---
+
+const archiveTopicsPath = path.join(rootPath, 'storage', 'Archive_data', 'RSpace_data', 'topics');
+
+export const getArchivedTopicsService = async () => {
+    if (!await fs.pathExists(archiveTopicsPath)) {
+        return [];
+    }
+    const topicDirs = await fs.readdir(archiveTopicsPath);
+    const topicsData = [];
+
+    for (const topicName of topicDirs) {
+        const topicConfigPath = path.join(archiveTopicsPath, topicName, 'topic_config.json');
+        if (await fs.pathExists(topicConfigPath)) {
+            const config = await fs.readJson(topicConfigPath);
+            topicsData.push({ name: topicName, ...config });
+        }
+    }
+    return topicsData;
+};
+
+export const getArchivedSubjectsService = async (topicName: string) => {
+    const topicPath = path.join(archiveTopicsPath, topicName);
+    if (!await fs.pathExists(topicPath)) {
+        throw new Error('Topik tidak ditemukan di arsip.');
+    }
+    const files = await fs.readdir(topicPath);
+    const subjectsData = [];
+
+    for (const fileName of files) {
+        if (fileName.endsWith('.json') && fileName !== 'topic_config.json') {
+            const subjectJson = await fs.readJson(path.join(topicPath, fileName));
+            subjectsData.push({
+                name: path.basename(fileName, '.json'),
+                ...subjectJson.metadata
+            });
+        }
+    }
+    return subjectsData;
+};
+
+export const getArchivedDiscussionsService = async (topicName: string, subjectName: string) => {
+    const subjectPath = path.join(archiveTopicsPath, topicName, `${subjectName}.json`);
+    if (!await fs.pathExists(subjectPath)) {
+        throw new Error('Subjek tidak ditemukan di arsip.');
+    }
+    const subjectJson = await fs.readJson(subjectPath);
+    return subjectJson.content || [];
+};
+
+// ... (Fungsi mergeTopicData dan mergeSubjectFile tetap sama) ...
 async function mergeTopicData(sourceTopicsPath: string, destTopicsPath: string, sourcePerpuskuPath: string, destPerpuskuPath: string) {
     await fs.ensureDir(destTopicsPath);
     const topicDirs = await fs.readdir(sourceTopicsPath);
@@ -106,11 +151,9 @@ async function mergeTopicData(sourceTopicsPath: string, destTopicsPath: string, 
             const sourceFilePath = path.join(sourceTopicDir, fileName);
             const destFilePath = path.join(destTopicDir, fileName);
 
-            // Jika ini adalah file JSON (data subjek)
             if (fileName.endsWith('.json') && fileName !== 'topic_config.json') {
                 await mergeSubjectFile(sourceFilePath, destFilePath, sourcePerpuskuPath, destPerpuskuPath);
             } 
-            // Jika ini adalah file konfigurasi atau file lain yang tidak perlu digabung
             else {
                 if (!await fs.pathExists(destFilePath)) {
                     await fs.copy(sourceFilePath, destFilePath);
@@ -119,18 +162,12 @@ async function mergeTopicData(sourceTopicsPath: string, destTopicsPath: string, 
         }
     }
 }
-
-/**
- * Menggabungkan konten dari satu file subjek JSON ke file tujuan.
- */
 async function mergeSubjectFile(sourceJsonPath: string, destJsonPath: string, sourcePerpuskuBasePath: string, destPerpuskuBasePath: string) {
     const sourceData: SubjectJson = await fs.readJson(sourceJsonPath);
 
-    // Jika file tujuan belum ada, cukup salin file sumber dan file HTML terkait
     if (!await fs.pathExists(destJsonPath)) {
         console.log(`File baru dibuat: ${path.basename(destJsonPath)}`);
         await fs.copy(sourceJsonPath, destJsonPath);
-        // Salin juga folder PerpusKu-nya
         const subjectName = path.basename(sourceJsonPath, '.json');
         const topicName = path.basename(path.dirname(sourceJsonPath));
         const sourceHtmlDir = path.join(sourcePerpuskuBasePath, topicName, subjectName);
@@ -141,7 +178,6 @@ async function mergeSubjectFile(sourceJsonPath: string, destJsonPath: string, so
         return;
     }
 
-    // Jika file tujuan sudah ada, lakukan penggabungan
     const destData: SubjectJson = await fs.readJson(destJsonPath);
     const existingDiscussionNames = new Set(destData.content.map(d => d.discussion));
     let newDiscussionsAdded = 0;
@@ -152,7 +188,6 @@ async function mergeSubjectFile(sourceJsonPath: string, destJsonPath: string, so
             existingDiscussionNames.add(newDiscussion.discussion);
             newDiscussionsAdded++;
 
-            // Salin file HTML terkait jika ada
             const htmlPath = (newDiscussion as any).filePath;
             if (htmlPath) {
                 const sourceHtmlPath = path.join(sourcePerpuskuBasePath, htmlPath);
@@ -167,7 +202,6 @@ async function mergeSubjectFile(sourceJsonPath: string, destJsonPath: string, so
 
     if (newDiscussionsAdded > 0) {
         console.log(`${newDiscussionsAdded} diskusi baru ditambahkan ke ${path.basename(destJsonPath)}`);
-        // Simpan kembali file JSON yang sudah digabung
         await fs.writeJson(destJsonPath, destData, { spaces: 2 });
     }
 }
