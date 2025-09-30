@@ -68,6 +68,10 @@ app.get('/profile', pageAuth, (req: Request, res: Response) => {
 app.get('/users', pageAuth, (req: Request, res: Response) => {
     res.sendFile(path.join(rootPath, 'src', 'views', 'users.html'));
 });
+
+app.get('/archive', (req, res) => {
+    res.sendFile(path.join(rootPath, 'src', 'views', 'archive.html'));
+});
 // ==========================================================
 
 
