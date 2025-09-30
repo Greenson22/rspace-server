@@ -1,12 +1,17 @@
 // src/controllers/archive.controller.ts
 
 import { Request, Response, NextFunction } from 'express';
-import * as archiveService from '../services/archive.service';
+import { 
+    archiveDiscussionsService,
+    getArchivedTopicsService,
+    getArchivedSubjectsService,
+    getArchivedDiscussionsService,
+    getArchivedFileService
+} from '../services/archive.service';
 
 export const handleArchiveUpload = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // req sudah memiliki req.user dari middleware jwtAuth
-        const result = await archiveService.archiveDiscussionsService(req);
+        const result = await archiveDiscussionsService(req);
         res.status(201).json(result);
     } catch (error) {
         next(error);
@@ -15,8 +20,8 @@ export const handleArchiveUpload = async (req: Request, res: Response, next: Nex
 
 export const getArchivedTopics = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user.userId; // Ambil ID pengguna
-        const topics = await archiveService.getArchivedTopicsService(userId); // Teruskan ID
+        const userId = req.user.userId;
+        const topics = await getArchivedTopicsService(userId);
         res.status(200).json(topics);
     } catch (error) {
         next(error);
@@ -25,9 +30,9 @@ export const getArchivedTopics = async (req: Request, res: Response, next: NextF
 
 export const getArchivedSubjects = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user.userId; // Ambil ID pengguna
+        const userId = req.user.userId;
         const { topicName } = req.params;
-        const subjects = await archiveService.getArchivedSubjectsService(userId, topicName); // Teruskan ID
+        const subjects = await getArchivedSubjectsService(userId, topicName);
         res.status(200).json(subjects);
     } catch (error) {
         next(error);
@@ -36,10 +41,30 @@ export const getArchivedSubjects = async (req: Request, res: Response, next: Nex
 
 export const getArchivedDiscussions = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const userId = req.user.userId; // Ambil ID pengguna
+        const userId = req.user.userId;
         const { topicName, subjectName } = req.params;
-        const discussions = await archiveService.getArchivedDiscussionsService(userId, topicName, subjectName); // Teruskan ID
+        const discussions = await getArchivedDiscussionsService(userId, topicName, subjectName);
         res.status(200).json(discussions);
+    } catch (error) {
+        next(error);
+    }
+};
+
+export const downloadArchivedFile = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userId = req.user.userId;
+        const filePath = req.query.path as string;
+        if (!filePath) {
+            return res.status(400).json({ message: 'Query parameter "path" dibutuhkan.' });
+        }
+        
+        const fileDetails = await getArchivedFileService(userId, filePath);
+        
+        res.download(fileDetails.filePath, fileDetails.originalName, (err) => {
+            if (err) {
+                console.error("Error saat mengirim file arsip:", err);
+            }
+        });
     } catch (error) {
         next(error);
     }

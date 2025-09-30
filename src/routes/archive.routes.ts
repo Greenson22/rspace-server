@@ -6,7 +6,8 @@ import {
     handleArchiveUpload,
     getArchivedTopics,
     getArchivedSubjects,
-    getArchivedDiscussions
+    getArchivedDiscussions,
+    downloadArchivedFile
 } from '../controllers/archive.controller';
 
 const router = Router();
@@ -14,16 +15,13 @@ const router = Router();
 // Endpoint untuk mengunggah arsip
 router.post('/discussions', upload.single('zipfile'), handleArchiveUpload);
 
-// --- ENDPOINT BARU UNTUK MENGAMBIL DATA ARSIP ---
-
-// Mendapatkan daftar semua topik dalam arsip
+// Endpoint untuk mengambil data arsip
 router.get('/topics', getArchivedTopics);
-
-// Mendapatkan daftar subjek dalam satu topik
 router.get('/topics/:topicName/subjects', getArchivedSubjects);
-
-// Mendapatkan daftar diskusi dalam satu subjek
 router.get('/topics/:topicName/subjects/:subjectName/discussions', getArchivedDiscussions);
 
+// Endpoint untuk mengunduh satu file HTML dari dalam arsip
+// e.g., /api/archive/file?path=NamaTopik/NamaSubjek/namafile.html
+router.get('/file', downloadArchivedFile);
 
 export default router;

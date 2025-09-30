@@ -4,7 +4,17 @@ import { Request } from 'express';
 import fs from 'fs-extra';
 import path from 'path';
 import AdmZip from 'adm-zip';
-import { getUserStoragePath } from '../config/path'; // Import helper path dinamis
+import { rootPath, getUserStoragePath } from '../config/path';
+
+// Interface untuk struktur data diskusi
+interface Discussion {
+    discussion: string;
+}
+
+interface SubjectJson {
+    metadata: object;
+    content: Discussion[];
+}
 
 /**
  * Fungsi utama yang menangani unggahan dan pemrosesan arsip.
@@ -14,14 +24,11 @@ export const archiveDiscussionsService = async (req: Request) => {
     if (!req.file) {
         throw new Error('File arsip .zip tidak ditemukan dalam permintaan.');
     }
-
-    // Pastikan req.user ada dari middleware jwtAuth
     if (!req.user || !req.user.userId) {
         throw new Error('Autentikasi gagal, ID pengguna tidak ditemukan.');
     }
 
     const userId = req.user.userId;
-    // Dapatkan path arsip untuk pengguna yang sedang login
     const userArchiveStorageDir = getUserStoragePath(userId, 'Archive_data');
     const uploadedFilePath = req.file.path;
 
@@ -31,7 +38,7 @@ export const archiveDiscussionsService = async (req: Request) => {
 
         console.log(`Mengekstrak file baru untuk user ID: ${userId}...`);
         const zip = new AdmZip(uploadedFilePath);
-        zip.extractAllTo(userArchiveStorageDir, /*overwrite*/ true);
+        zip.extractAllTo(userArchiveStorageDir, true);
         
         console.log('Ekstraksi selesai.');
 
@@ -41,18 +48,15 @@ export const archiveDiscussionsService = async (req: Request) => {
         };
     } catch (error) {
         console.error(`Terjadi error selama proses arsip untuk user ID ${userId}:`, error);
-        // Jika terjadi error, coba bersihkan direktori arsip pengguna untuk menghindari data korup
         await fs.emptyDir(userArchiveStorageDir);
         throw new Error('Gagal memproses file arsip di server.');
     } finally {
-        // Selalu hapus file .zip temporer yang diunggah setelah selesai.
         await fs.remove(uploadedFilePath);
         console.log(`File .zip temporer untuk user ID ${userId} telah dihapus.`);
     }
 };
 
-
-// --- FUNGSI PENGAMBILAN DATA SEKARANG MEMERLUKAN userId ---
+// --- FUNGSI PENGAMBILAN DATA ARSIP ---
 
 export const getArchivedTopicsService = async (userId: number) => {
     const userTopicsPath = path.join(getUserStoragePath(userId, 'Archive_data'), 'RSpace_data', 'topics');
@@ -66,7 +70,6 @@ export const getArchivedTopicsService = async (userId: number) => {
     for (const topicName of topicDirs) {
         const topicDirFullPath = path.join(userTopicsPath, topicName);
         const stats = await fs.stat(topicDirFullPath);
-        // Pastikan itu adalah direktori
         if (stats.isDirectory()) {
             const topicConfigPath = path.join(topicDirFullPath, 'topic_config.json');
             if (await fs.pathExists(topicConfigPath)) {
@@ -111,4 +114,24 @@ export const getArchivedDiscussionsService = async (userId: number, topicName: s
     }
     const subjectJson = await fs.readJson(userSubjectPath);
     return subjectJson.content || [];
+};
+
+/**
+ * Mendapatkan path file fisik dari sebuah file HTML di dalam arsip pengguna.
+ * @param userId - ID pengguna yang sedang login.
+ * @param relativePath - Path relatif file seperti yang tersimpan di data discussion (e.g., "Topic/Subject/file.html").
+ * @returns Object berisi path absolut ke file dan nama file aslinya.
+ */
+export const getArchivedFileService = async (userId: number, relativePath: string) => {
+    const perpuskuArchivePath = path.join(getUserStoragePath(userId, 'Archive_data'), 'PerpusKu_data', 'topics');
+    const filePath = path.join(perpuskuArchivePath, relativePath);
+
+    if (!await fs.pathExists(filePath)) {
+        throw new Error('File tidak ditemukan di dalam arsip server.');
+    }
+
+    return {
+        filePath,
+        originalName: path.basename(filePath)
+    };
 };
