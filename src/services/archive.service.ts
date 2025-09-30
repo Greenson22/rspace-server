@@ -26,7 +26,10 @@ export const archiveDiscussionsService = async (req: Request) => {
     }
 
     const uploadDir = path.join(rootPath, 'storage', 'Archive_data');
-    const tempFilePath = req.file.path;
+    
+    // ## PERBAIKAN: Hapus variabel tempFilePath yang tidak perlu ##
+    // const tempFilePath = req.file.path; 
+    
     const targetFilename = 'FinishedDiscussionsArchive.zip';
     const targetFilePath = path.join(uploadDir, targetFilename);
     const extractDir = path.join(uploadDir, 'extracted');
@@ -34,19 +37,8 @@ export const archiveDiscussionsService = async (req: Request) => {
     // Pastikan direktori utama ada
     await fs.ensureDir(uploadDir);
 
-    // Cadangkan arsip .zip lama jika ada
-    if (await fs.pathExists(targetFilePath)) {
-        const now = new Date();
-        const timestamp = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
-        const archiveBackupFilename = `Archive_backup_${timestamp}.zip`;
-        const archiveBackupPath = path.join(uploadDir, archiveBackupFilename);
-        
-        await fs.rename(targetFilePath, archiveBackupPath);
-        console.log(`Arsip lama disimpan sebagai: ${archiveBackupFilename}`);
-    }
-
-    // Pindahkan file dari nama temporer ke nama target
-    await fs.move(tempFilePath, targetFilePath, { overwrite: true });
+    // ## PERBAIKAN: Baris ini tidak lagi diperlukan dan telah dihapus ##
+    // await fs.move(tempFilePath, targetFilePath, { overwrite: true });
 
     // --- LOGIKA BARU: EKSTRAK DAN GABUNGKAN SECARA CERDAS ---
 
