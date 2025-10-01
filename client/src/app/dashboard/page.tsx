@@ -4,14 +4,23 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
+// Impor komponen-komponen baru
+import ArchiveView from '@/components/ArchiveView';
+import BackupView from '@/components/BackupView';
+import AboutView from '@/components/AboutView';
+
 interface UserProfile {
     name: string;
     email: string;
 }
 
+// Tentukan tipe untuk view yang aktif
+type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about';
+
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
+    const [activeView, setActiveView] = useState<ActiveView>('dashboard');
     const router = useRouter();
 
     useEffect(() => {
@@ -27,10 +36,8 @@ export default function DashboardPage() {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
 
-                if (!res.ok) {
-                    throw new Error('Gagal mengambil data profil');
-                }
-
+                if (!res.ok) throw new Error('Gagal mengambil data profil');
+                
                 const data: UserProfile = await res.json();
                 setUser(data);
             } catch (error) {
@@ -50,6 +57,41 @@ export default function DashboardPage() {
         router.push('/login');
     };
 
+    const renderContent = () => {
+        switch (activeView) {
+            case 'archive':
+                return <ArchiveView />;
+            case 'backup':
+                return <BackupView />;
+            case 'about':
+                return <AboutView />;
+            case 'dashboard':
+            default:
+                return (
+                    <div className="p-8 bg-white rounded-lg shadow">
+                        <h2 className="text-2xl font-bold text-gray-900">
+                            Selamat Datang, {user?.name || 'Pengguna'}!
+                        </h2>
+                        <p className="mt-2 text-gray-600">
+                            Ini adalah halaman dasbor utama Anda. Pilih menu di atas untuk memulai.
+                        </p>
+                         <p className="mt-1 text-gray-600">
+                            Email Anda terdaftar sebagai: {user?.email}
+                        </p>
+                    </div>
+                );
+        }
+    };
+    
+    // Helper untuk styling tab navigasi
+    const getNavClass = (viewName: ActiveView) => 
+        `px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors ${
+            activeView === viewName
+                ? 'bg-indigo-100 text-indigo-700'
+                : 'text-gray-600 hover:bg-gray-200'
+        }`;
+
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-screen">
@@ -63,8 +105,14 @@ export default function DashboardPage() {
             <nav className="bg-white shadow-sm">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                     <div className="flex justify-between h-16">
-                        <div className="flex items-center">
-                            <h1 className="text-xl font-bold text-indigo-600">Dasbor Saya</h1>
+                        <div className="flex items-center space-x-6">
+                             <h1 className="text-xl font-bold text-indigo-600">RSpace</h1>
+                             <div className="flex items-center space-x-2">
+                                <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
+                                <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
+                                <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
+                                <a onClick={() => setActiveView('about')} className={getNavClass('about')}>Tentang</a>
+                            </div>
                         </div>
                         <div className="flex items-center">
                             <button
@@ -80,17 +128,7 @@ export default function DashboardPage() {
 
             <main className="py-10">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="p-8 bg-white rounded-lg shadow">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            Selamat Datang, {user?.name || 'Pengguna'}!
-                        </h2>
-                        <p className="mt-2 text-gray-600">
-                            Ini adalah halaman dasbor pribadi Anda.
-                        </p>
-                        <p className="mt-1 text-gray-600">
-                            Email Anda terdaftar sebagai: {user?.email}
-                        </p>
-                    </div>
+                    {renderContent()}
                 </div>
             </main>
         </div>
