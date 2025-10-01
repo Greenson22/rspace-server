@@ -6,10 +6,12 @@ import { useRouter } from 'next/navigation';
 import { ArchiveList } from '@/components/fragments/ArchiveList';
 import { BackupList } from '@/components/fragments/BackupList';
 import { AboutContent } from '@/components/fragments/AboutContent';
+import { ProfileView } from '@/components/fragments/ProfileView'; // <-- 1. Impor komponen baru
 import { Card } from '@/components/elements/Card';
 
 interface UserProfile { name: string; email: string; }
-type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about';
+// Tambahkan 'profile' ke tipe ActiveView
+type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -53,6 +55,7 @@ export default function DashboardPage() {
             case 'archive': return <ArchiveList />;
             case 'backup': return <BackupList />;
             case 'about': return <AboutContent />;
+            case 'profile': return <ProfileView />; // <-- 2. Tambahkan case untuk profil
             default:
                 return (
                     <Card>
@@ -87,6 +90,7 @@ export default function DashboardPage() {
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
                                 <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
+                                <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a> {/* <-- 3. Tambahkan tombol navigasi Profil */}
                                 <a onClick={() => setActiveView('about')} className={getNavClass('about')}>Tentang</a>
                             </div>
                         </div>
