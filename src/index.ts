@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express, { Request, Response, NextFunction } from 'express';
+import next from 'next'; // 1. Import Next.js
 import cors from 'cors';
 import { MulterError } from 'multer';
 import path from 'path';
@@ -12,7 +13,7 @@ import { rootPath } from './config/path';
 // Impor Database Service
 import './services/database.service'; 
 
-// Rute
+// Rute API (tetap sama)
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import backupRoutes from './routes/backup.routes';
@@ -29,78 +30,67 @@ import archiveRoutes from './routes/archive.routes';
 // Middleware
 import { jwtAuth } from './middleware/jwt.middleware';
 
-const app = express();
-const PORT = 3000;
+// 2. Tentukan mode dev/prod dan inisialisasi aplikasi Next.js
+const dev = process.env.NODE_ENV !== 'production';
+const nextApp = next({ dev, dir: './client' }); // Arahkan ke folder 'client'
+const handle = nextApp.getRequestHandler();
 
-// Middleware global
-app.use(cors());
-app.use(express.json());
+const PORT = process.env.PORT || 3000;
 
+// 3. Gunakan .then() karena nextApp.prepare() adalah async
+nextApp.prepare().then(() => {
+    const app = express();
 
-// ==========================================================
-// == ENDPOINT UNTUK MENYAJIKAN HALAMAN DAN ASET STATIS ==
-// ==========================================================
-// Halaman Utama
-app.get('/', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'login.html')));
-app.get('/register', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'register.html')));
-app.get('/dashboard', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'dashboard.html')));
-app.get('/profile', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'profile.html')));
-app.get('/users', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'users.html')));
-app.get('/archive', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'archive.html')));
-app.get('/backups', (req, res) => res.sendFile(path.join(rootPath, 'src', 'views', 'backups.html')));
+    // Middleware global
+    app.use(cors());
+    app.use(express.json());
 
-// Aset Parsial (Navbar, dll)
-app.get('/partials/navbar.html', (req, res) => {
-    res.sendFile(path.join(rootPath, 'src', 'views', 'partials', 'navbar.html'));
-});
+    // Sajikan folder /storage secara statis (tetap diperlukan)
+    app.use('/storage', express.static(path.join(rootPath, 'storage')));
 
-// Aset JavaScript
-app.get('/js/main.js', (req, res) => {
-    res.sendFile(path.join(rootPath, 'src', 'views', 'js', 'main.js'));
-});
-// ==========================================================
+    // Rute API (semua rute API Anda tetap di sini)
+    app.use('/api', authRoutes);
+    app.use('/api', jwtAuth, userRoutes);
+    app.use('/api', jwtAuth, backupRoutes);
+    
+    // Kelompokkan rute API di bawah satu middleware jwtAuth untuk efisiensi
+    app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, rspaceDownloadRoutes, rspaceFileRoutes);
+    app.use('/api/perpusku', jwtAuth, perpuskuUploadRoutes, perpuskuDownloadRoutes, perpuskuFileRoutes);
+    app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDiscussionFileRoutes);
+    app.use('/api/archive', jwtAuth, archiveRoutes);
 
-// Rute API
-app.use('/api', authRoutes);
-app.use('/api', jwtAuth, userRoutes);
-app.use('/api', jwtAuth, backupRoutes);
-app.use('/api', jwtAuth); // Terapkan middleware jwtAuth untuk sisa rute di bawah
+    // 4. Hapus semua app.get() untuk file HTML statis lama
 
-app.use('/api/rspace', rspaceUploadRoutes);
-app.use('/api/rspace', rspaceDownloadRoutes);
-app.use('/api/rspace', rspaceFileRoutes);
-app.use('/api/perpusku', perpuskuUploadRoutes);
-app.use('/api/perpusku', perpuskuDownloadRoutes);
-app.use('/api/perpusku', perpuskuFileRoutes);
-app.use('/api/discussion', finishedDiscussionUploadRoutes);
-app.use('/api/discussion', finishedDiscussionFileRoutes);
-app.use('/api/archive', archiveRoutes);
-
-// ... (Penanganan Error Global dan app.listen tidak berubah) ...
-app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
-    console.error(err);
-
-    if (err.message === 'Email sudah terdaftar.' || err.message === 'Email atau password salah.') {
-        return res.status(400).json({ type: 'AuthError', message: err.message });
-    }
-
-    if (err instanceof MulterError) {
-        return res.status(400).json({
-            type: 'UploadError',
-            message: `Terjadi error saat unggah file: ${err.message}`,
-            field: err.field,
-        });
-    }
-
-    const isDevelopment = process.env.NODE_ENV === 'development';
-    return res.status(500).json({
-        type: 'ServerError',
-        message: 'Terjadi kesalahan pada server.',
-        error: isDevelopment ? { message: err.message, stack: err.stack } : undefined,
+    // 5. Serahkan semua request lainnya (non-API) ke Next.js
+    app.all('*', (req: Request, res: Response) => {
+        return handle(req, res);
     });
-});
 
+    // Penanganan Error Global (tetap sama)
+    app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+        console.error(err);
 
-app.listen(PORT, () => {
-    console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+        if (err.message === 'Email sudah terdaftar.' || err.message === 'Email atau password salah.') {
+            return res.status(400).json({ type: 'AuthError', message: err.message });
+        }
+
+        if (err instanceof MulterError) {
+            return res.status(400).json({
+                type: 'UploadError',
+                message: `Terjadi error saat unggah file: ${err.message}`,
+                field: err.field,
+            });
+        }
+
+        const isDevelopment = process.env.NODE_ENV === 'development';
+        return res.status(500).json({
+            type: 'ServerError',
+            message: 'Terjadi kesalahan pada server.',
+            error: isDevelopment ? { message: err.message, stack: err.stack } : undefined,
+        });
+    });
+
+    app.listen(PORT, () => {
+        console.log(`🚀 Server berjalan di http://localhost:${PORT}`);
+    });
 });
