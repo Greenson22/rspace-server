@@ -104,14 +104,32 @@ const ArchiveView = () => {
     
     // Handler untuk melihat konten diskusi
     const handleDiscussionSelect = async (discussion: Discussion) => {
-        if (!discussion.filePath) return;
+        // === PERBAIKAN UTAMA ADA DI SINI ===
+        if (!discussion.filePath || !selectedTopic || !selectedSubject) {
+            setError('Informasi tidak lengkap untuk membuka file.');
+            return;
+        }
+
         setLoading(true);
         setHtmlContent(null);
+        setError('');
+
         try {
-            const res = await fetch(`/api/archive/file?path=${encodeURIComponent(discussion.filePath)}`, {
+            // Rekonstruksi path relatif yang benar: "NamaTopik/NamaSubjek/namafile.html"
+            const fullRelativePath = `${selectedTopic.name}/${selectedSubject.name}/${discussion.filePath}`;
+            
+            const res = await fetch(`/api/archive/file?path=${encodeURIComponent(fullRelativePath)}`, {
                  headers: { 'Authorization': `Bearer ${token}` },
             });
-            if (!res.ok) throw new Error('Gagal mengunduh file konten.');
+
+            if (res.status === 500) {
+                 const errorData = await res.json();
+                 throw new Error(errorData.message || 'Server error saat mengambil file.');
+            }
+            if (!res.ok) {
+                 throw new Error(`Gagal mengunduh file konten (Status: ${res.status}).`);
+            }
+
             const html = await res.text();
             setHtmlContent(html);
         } catch (err: any) {
@@ -129,16 +147,20 @@ const ArchiveView = () => {
                 setSelectedSubject(null);
                 setDiscussions([]);
                 setHtmlContent(null);
+                 setError('');
             }}>Arsip</span>
             {selectedTopic && (
                 <>
                     <span> &gt; </span>
-                    <span className="cursor-pointer hover:underline" onClick={() => handleTopicSelect(selectedTopic)}>
+                    <span className="cursor-pointer hover:underline" onClick={() => {
+                        handleTopicSelect(selectedTopic);
+                         setError('');
+                    }}>
                         {selectedTopic.name}
                     </span>
                 </>
             )}
-            {selectedSubject && (
+            {selectedSubject && !htmlContent && (
                 <>
                     <span> &gt; </span>
                     <span className="font-semibold text-gray-700">{selectedSubject.name}</span>
@@ -150,19 +172,31 @@ const ArchiveView = () => {
     // Tampilan Konten
     const renderContent = () => {
         if (loading) return <div className="text-center p-8"><p>Memuat...</p></div>;
-        if (error) return <div className="text-center p-8 text-red-500"><p>{error}</p></div>;
+        if (error) return <div className="text-center p-8 text-red-500"><p>Error: {error}</p></div>;
         
         if(htmlContent) {
-            return <div dangerouslySetInnerHTML={{ __html: htmlContent }} />;
+            // Gunakan iframe untuk isolasi gaya (styling)
+            return (
+                 <iframe
+                    srcDoc={htmlContent}
+                    className="w-full h-[60vh] border rounded-md"
+                    title="Konten Arsip"
+                />
+            );
         }
 
         if(selectedSubject) {
              return (
                 <ul className="space-y-2">
                     {discussions.map(d => (
-                        <li key={d.discussion} className={`p-3 rounded-md ${d.filePath ? 'cursor-pointer hover:bg-gray-100' : 'text-gray-400'}`} onClick={() => handleDiscussionSelect(d)}>
-                           <p className="font-semibold">{d.discussion}</p>
-                           <p className="text-xs text-gray-500">Selesai: {d.finish_date}</p>
+                        <li key={d.discussion} 
+                            className={`p-3 rounded-md border ${d.filePath ? 'cursor-pointer hover:bg-gray-100' : 'text-gray-400 bg-gray-50'}`} 
+                            onClick={() => d.filePath && handleDiscussionSelect(d)}>
+                           <p className="font-semibold flex items-center">
+                               <Icon type={d.filePath ? 'link' : 'link_off'} />
+                               {d.discussion}
+                           </p>
+                           <p className="text-xs text-gray-500 mt-1 ml-8">Selesai: {d.finish_date}</p>
                         </li>
                     ))}
                 </ul>
@@ -173,8 +207,9 @@ const ArchiveView = () => {
             return (
                  <ul className="space-y-2">
                     {subjects.map(s => (
-                        <li key={s.name} className="p-3 rounded-md cursor-pointer hover:bg-gray-100" onClick={() => handleSubjectSelect(s)}>
-                           <span className="mr-2">{s.icon || '📄'}</span> {s.name}
+                        <li key={s.name} className="p-3 rounded-md cursor-pointer hover:bg-gray-100 border" onClick={() => handleSubjectSelect(s)}>
+                           <span className="mr-3 text-xl">{s.icon || '📄'}</span> 
+                           <span className="font-medium">{s.name}</span>
                         </li>
                     ))}
                 </ul>
@@ -184,13 +219,21 @@ const ArchiveView = () => {
         return (
             <ul className="space-y-2">
                 {topics.map(t => (
-                    <li key={t.name} className="p-3 rounded-md cursor-pointer hover:bg-gray-100" onClick={() => handleTopicSelect(t)}>
-                        <span className="mr-2">{t.icon || '📁'}</span> {t.name}
+                    <li key={t.name} className="p-3 rounded-md cursor-pointer hover:bg-gray-100 border" onClick={() => handleTopicSelect(t)}>
+                        <span className="mr-3 text-xl">{t.icon || '📁'}</span>
+                        <span className="font-medium">{t.name}</span>
                     </li>
                 ))}
             </ul>
         );
     };
+    
+    const Icon = ({type}: {type: 'link' | 'link_off'}) => (
+        <span className={`mr-2 text-lg ${type === 'link' ? 'text-blue-500' : 'text-gray-400'}`}>
+            {type === 'link' ? '🔗' : '✖️'}
+        </span>
+    );
+
 
     return (
         <Card>
