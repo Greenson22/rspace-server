@@ -2,7 +2,8 @@
 
 import path from 'path';
 import fs from 'fs-extra';
-import { rootPath } from '../config/path';
+// Impor helper yang diperlukan
+import { getUserStoragePath } from '../config/path';
 
 interface FileMetadata {
     uniqueName: string;
@@ -11,11 +12,14 @@ interface FileMetadata {
 }
 
 /**
- * Helper function to read metadata and format file list.
+ * Helper function to read metadata and format file list from a user-specific storage.
+ * @param userId - ID of the user whose backups to retrieve.
  * @param storageType - 'RSpace_data' or 'PerpusKu_data'
  */
-const getBackupList = async (storageType: 'RSpace_data' | 'PerpusKu_data'): Promise<any[]> => {
-    const metadataPath = path.join(rootPath, 'storage', storageType, 'metadata.json');
+const getBackupList = async (userId: number, storageType: 'RSpace_data' | 'PerpusKu_data'): Promise<any[]> => {
+    // Gunakan getUserStoragePath untuk mendapatkan path yang benar
+    const userStorageDir = getUserStoragePath(userId, storageType);
+    const metadataPath = path.join(userStorageDir, 'metadata.json');
 
     if (!await fs.pathExists(metadataPath)) {
         return []; // Return array kosong jika metadata tidak ada
@@ -23,17 +27,7 @@ const getBackupList = async (storageType: 'RSpace_data' | 'PerpusKu_data'): Prom
 
     const metadata: FileMetadata[] = await fs.readJson(metadataPath);
 
-    const fileList = metadata.map(file => ({
-        uniqueName: file.uniqueName,
-        originalName: file.originalName,
-        createdAt: new Date(file.createdAt).toLocaleString('id-ID', {
-            timeZone: 'Asia/Makassar',
-            dateStyle: 'long',
-            timeStyle: 'short',
-        })
-    }));
-
-    // Urutkan dari yang terbaru berdasarkan timestamp asli, bukan string tanggal
+    // Urutkan dari yang terbaru berdasarkan timestamp asli
     metadata.sort((a, b) => b.createdAt - a.createdAt);
     
     // Kembalikan fileList yang sudah diformat dan diurutkan
@@ -48,10 +42,12 @@ const getBackupList = async (storageType: 'RSpace_data' | 'PerpusKu_data'): Prom
     }));
 };
 
-export const getRspaceBackups = async () => {
-    return getBackupList('RSpace_data');
+// Terima userId sebagai argumen
+export const getRspaceBackups = async (userId: number) => {
+    return getBackupList(userId, 'RSpace_data');
 };
 
-export const getPerpuskuBackups = async () => {
-    return getBackupList('PerpusKu_data');
+// Terima userId sebagai argumen
+export const getPerpuskuBackups = async (userId: number) => {
+    return getBackupList(userId, 'PerpusKu_data');
 };
