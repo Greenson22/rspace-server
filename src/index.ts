@@ -13,12 +13,13 @@ import { rootPath } from './config/path';
 // Impor Database Service
 import './services/database.service'; 
 
-// Rute API (tetap sama)
+// Rute API
 import authRoutes from './routes/auth.routes';
 import userRoutes from './routes/user.routes';
 import backupRoutes from './routes/backup.routes';
 import rspaceUploadRoutes from './routes/rspace_upload.routes';
-import rspaceDownloadRoutes from './routes/rspace_download.routes';
+// ## PERUBAHAN 1: Impor kedua router dari rspace_download.routes ##
+import { publicRspaceDownloadRoutes, privateRspaceDownloadRoutes } from './routes/rspace_download.routes';
 import rspaceFileRoutes from './routes/rspace_file.routes';
 import perpuskuUploadRoutes from './routes/perpusku_upload.routes';
 import perpuskuDownloadRoutes from './routes/perpusku_download.routes';
@@ -48,20 +49,23 @@ nextApp.prepare().then(() => {
     // Sajikan folder /storage secara statis (tetap diperlukan)
     app.use('/storage', express.static(path.join(rootPath, 'storage')));
 
-    // Rute API (semua rute API Anda tetap di sini)
+    // Rute API
     app.use('/api', authRoutes);
+
+    // ## PERUBAHAN 2: Daftarkan rute download-src PUBLIK (tanpa JWT) ##
+    app.use('/api/rspace', publicRspaceDownloadRoutes);
+    
+    // Rute-rute di bawah ini memerlukan autentikasi JWT
     app.use('/api', jwtAuth, userRoutes);
     app.use('/api', jwtAuth, backupRoutes);
     
-    // Kelompokkan rute API di bawah satu middleware jwtAuth untuk efisiensi
-    app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, rspaceDownloadRoutes, rspaceFileRoutes);
+    // ## PERUBAHAN 3: Kelompokkan sisa rute API PRIVAT di bawah middleware jwtAuth ##
+    app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, privateRspaceDownloadRoutes, rspaceFileRoutes);
     app.use('/api/perpusku', jwtAuth, perpuskuUploadRoutes, perpuskuDownloadRoutes, perpuskuFileRoutes);
     app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDiscussionFileRoutes);
     app.use('/api/archive', jwtAuth, archiveRoutes);
 
-    // 4. Hapus semua app.get() untuk file HTML statis lama
-
-    // 5. Serahkan semua request lainnya (non-API) ke Next.js
+    // 4. Serahkan semua request lainnya (non-API) ke Next.js
     app.all('*', (req: Request, res: Response) => {
         return handle(req, res);
     });

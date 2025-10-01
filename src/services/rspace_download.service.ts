@@ -1,3 +1,5 @@
+// src/services/rspace_download.service.ts
+
 import archiver from 'archiver';
 import path from 'path';
 import fs from 'fs';
@@ -12,6 +14,18 @@ interface FileMetadata {
 export const downloadSrcService = () => {
     const sourceDir = path.join(rootPath, 'src');
     const zipFileName = 'src-archive.zip';
+    const archive = archiver('zip', { zlib: { level: 9 } });
+
+    archive.directory(sourceDir, false);
+    
+    return { archive, zipFileName };
+};
+
+// ## FUNGSI BARU DITAMBAHKAN ##
+// Fungsi untuk membuat arsip dari folder client/src
+export const downloadClientSrcService = () => {
+    const sourceDir = path.join(rootPath, 'client', 'src'); // Path diubah ke client/src
+    const zipFileName = 'client-src-archive.zip';
     const archive = archiver('zip', { zlib: { level: 9 } });
 
     archive.directory(sourceDir, false);
@@ -35,7 +49,6 @@ export const downloadFileService = (uniqueName: string) => {
         throw new Error('File tidak ditemukan di dalam metadata.');
     }
     
-    // Perbaikan: `uniqueName` dari metadata sudah berisi ekstensi .zip
     const filePath = path.join(storageDir, uniqueName);
     if (!fs.existsSync(filePath)) {
         throw new Error('File fisik tidak ditemukan di server.');

@@ -1,10 +1,19 @@
+// src/routes/rspace_download.routes.ts
+
 import { Router } from 'express';
-import { handleDownloadSrc, handleDownloadFile } from '../controllers/rspace_download.controller';
+// ## PERUBAHAN 1: Impor controller baru ##
+import { handleDownloadSrc, handleDownloadClientSrc, handleDownloadFile } from '../controllers/rspace_download.controller';
 
-const router = Router();
+const publicRouter = Router();
+const privateRouter = Router();
 
-// Endpoint untuk men-trigger download folder src sebagai zip
-router.get('/download-src', handleDownloadSrc);
-router.get('/download/:uniqueName', handleDownloadFile);
+// Endpoint PUBLIK untuk download folder server src
+publicRouter.get('/download-src', handleDownloadSrc);
 
-export default router;
+// ## PERUBAHAN 2: Tambahkan endpoint PUBLIK baru untuk download client/src ##
+publicRouter.get('/download-client-src', handleDownloadClientSrc);
+
+// Endpoint PRIVAT yang tetap memerlukan autentikasi
+privateRouter.get('/download/:uniqueName', handleDownloadFile);
+
+export { publicRouter as publicRspaceDownloadRoutes, privateRouter as privateRspaceDownloadRoutes };
