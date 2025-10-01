@@ -1,20 +1,14 @@
-// rspace_server/client/src/app/dashboard/page.tsx
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { ArchiveList } from '@/components/fragments/ArchiveList';
+import { BackupList } from '@/components/fragments/BackupList';
+import { AboutContent } from '@/components/fragments/AboutContent';
+import { Card } from '@/components/elements/Card';
 
-// Impor komponen-komponen baru
-import ArchiveView from '@/components/ArchiveView';
-import BackupView from '@/components/BackupView';
-import AboutView from '@/components/AboutView';
-
-interface UserProfile {
-    name: string;
-    email: string;
-}
-
-// Tentukan tipe untuk view yang aktif
+interface UserProfile { name: string; email: string; }
 type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about';
 
 export default function DashboardPage() {
@@ -24,20 +18,18 @@ export default function DashboardPage() {
     const router = useRouter();
 
     useEffect(() => {
+        // ... (logika fetch profil tetap sama) ...
         const fetchProfile = async () => {
             const token = localStorage.getItem('token');
             if (!token) {
                 router.push('/login');
                 return;
             }
-
             try {
                 const res = await fetch('/api/profile', {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
-
                 if (!res.ok) throw new Error('Gagal mengambil data profil');
-                
                 const data: UserProfile = await res.json();
                 setUser(data);
             } catch (error) {
@@ -48,7 +40,6 @@ export default function DashboardPage() {
                 setLoading(false);
             }
         };
-
         fetchProfile();
     }, [router]);
 
@@ -59,31 +50,20 @@ export default function DashboardPage() {
 
     const renderContent = () => {
         switch (activeView) {
-            case 'archive':
-                return <ArchiveView />;
-            case 'backup':
-                return <BackupView />;
-            case 'about':
-                return <AboutView />;
-            case 'dashboard':
+            case 'archive': return <ArchiveList />;
+            case 'backup': return <BackupList />;
+            case 'about': return <AboutContent />;
             default:
                 return (
-                    <div className="p-8 bg-white rounded-lg shadow">
-                        <h2 className="text-2xl font-bold text-gray-900">
-                            Selamat Datang, {user?.name || 'Pengguna'}!
-                        </h2>
-                        <p className="mt-2 text-gray-600">
-                            Ini adalah halaman dasbor utama Anda. Pilih menu di atas untuk memulai.
-                        </p>
-                         <p className="mt-1 text-gray-600">
-                            Email Anda terdaftar sebagai: {user?.email}
-                        </p>
-                    </div>
+                    <Card>
+                        <h2 className="text-2xl font-bold text-gray-900">Selamat Datang, {user?.name || 'Pengguna'}!</h2>
+                        <p className="mt-2 text-gray-600">Ini adalah halaman dasbor utama Anda. Pilih menu di atas untuk memulai.</p>
+                        <p className="mt-1 text-gray-600">Email Anda terdaftar sebagai: {user?.email}</p>
+                    </Card>
                 );
         }
     };
-    
-    // Helper untuk styling tab navigasi
+
     const getNavClass = (viewName: ActiveView) => 
         `px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors ${
             activeView === viewName
@@ -91,15 +71,11 @@ export default function DashboardPage() {
                 : 'text-gray-600 hover:bg-gray-200'
         }`;
 
-
     if (loading) {
-        return (
-            <div className="flex items-center justify-center min-h-screen">
-                <p>Memuat...</p>
-            </div>
-        );
+        return <div className="flex items-center justify-center min-h-screen"><p>Memuat...</p></div>;
     }
 
+    // Layout halaman dasbor diimplementasikan langsung di sini
     return (
         <div className="min-h-screen bg-gray-100">
             <nav className="bg-white shadow-sm">
@@ -125,7 +101,6 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </nav>
-
             <main className="py-10">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {renderContent()}
