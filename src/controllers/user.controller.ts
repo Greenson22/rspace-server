@@ -59,7 +59,7 @@ export const uploadProfilePicture = async (req: Request, res: Response, next: Ne
         
         // ==> PERBAIKAN DI SINI: Hapus '/storage' dari path yang disimpan <==
         // Sekarang path-nya akan menjadi: user_1/profile_pictures/namafile.jpg
-        const relativePath = path.join(`user_${userId}`, 'profile_pictures', req.file.filename);
+        const relativePath = `user_${userId}/profile_pictures/${req.file.filename}`;
 
         await userService.updateUserPicturePath(userId, relativePath);
 

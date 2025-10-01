@@ -1,11 +1,11 @@
 // src/components/fragments/ProfileView.tsx
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { Card } from '../elements/Card';
 import Image from 'next/image';
+import { Button } from '../elements/Button';
 
-// Perbarui interface untuk mencakup semua data profil
 interface UserProfile {
     name: string | null;
     email: string;
@@ -19,42 +19,100 @@ export const ProfileView = () => {
     const [profile, setProfile] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
+    
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+    const [isUploading, setIsUploading] = useState(false);
+    const [uploadError, setUploadError] = useState('');
+    
+    const [imageError, setImageError] = useState(false);
+
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const fetchProfile = async () => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setError('Autentikasi gagal. Silakan login kembali.');
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const res = await fetch(`/api/profile?v=${new Date().getTime()}`, {
+                headers: { 'Authorization': `Bearer ${token}` },
+            });
+            if (!res.ok) throw new Error('Gagal memuat data profil.');
+            
+            const data: UserProfile = await res.json();
+            setProfile(data);
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
 
     useEffect(() => {
-        const fetchProfile = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                setError('Autentikasi gagal. Silakan login kembali.');
-                setLoading(false);
-                return;
-            }
-
-            try {
-                const res = await fetch('/api/profile', {
-                    headers: { 'Authorization': `Bearer ${token}` },
-                });
-
-                if (!res.ok) {
-                    throw new Error('Gagal memuat data profil.');
-                }
-
-                const data: UserProfile = await res.json();
-                setProfile(data);
-            } catch (err) {
-                if (err instanceof Error) {
-                    setError(err.message);
-                } else {
-                    setError('Terjadi kesalahan yang tidak terduga');
-                }
-            } finally {
-                setLoading(false);
-            }
-        };
-
+        setImageError(false);
         fetchProfile();
     }, []);
+    
+    const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            setSelectedFile(file);
+            setPreviewUrl(URL.createObjectURL(file));
+            setUploadError('');
+            setImageError(false);
+        }
+    };
 
-    // Fungsi untuk memformat tanggal
+    const handleCancelUpload = () => {
+        setSelectedFile(null);
+        setPreviewUrl(null);
+        if(fileInputRef.current) {
+            fileInputRef.current.value = "";
+        }
+    };
+
+    const handleUpload = async () => {
+        if (!selectedFile) return;
+
+        const token = localStorage.getItem('token');
+        if (!token) {
+            setUploadError('Sesi Anda telah berakhir. Silakan login kembali.');
+            return;
+        }
+
+        setIsUploading(true);
+        setUploadError('');
+
+        const formData = new FormData();
+        formData.append('profilePicture', selectedFile);
+
+        try {
+            const res = await fetch('/api/profile/picture', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData,
+            });
+
+            if (!res.ok) {
+                const errorData = await res.json();
+                throw new Error(errorData.message || 'Gagal mengunggah gambar.');
+            }
+
+            handleCancelUpload();
+            await fetchProfile();
+            setImageError(false);
+
+        } catch (err: any) {
+            setUploadError(err.message);
+        } finally {
+            setIsUploading(false);
+        }
+    };
+
     const formatDate = (dateString: string | null) => {
         if (!dateString) return 'Tidak diatur';
         return new Date(dateString).toLocaleDateString('id-ID', {
@@ -63,6 +121,15 @@ export const ProfileView = () => {
             day: 'numeric',
         });
     };
+    
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const profileImageUrl = profile?.profile_picture_path 
+        ? `${baseUrl}/storage/${profile.profile_picture_path}` 
+        : null;
+
+    const profileImagePath = previewUrl || profileImageUrl;
+    const showImage = profileImagePath && !imageError;
+    const userInitial = profile?.name?.[0]?.toUpperCase() || 'U';
 
     return (
         <Card>
@@ -71,17 +138,59 @@ export const ProfileView = () => {
             {error && <p className="text-red-600">{error}</p>}
             {!loading && profile && (
                 <div className="flex flex-col md:flex-row items-start space-y-6 md:space-y-0 md:space-x-8">
-                    <div className="flex-shrink-0">
-                        <Image
-                            src={profile.profile_picture_path ? `/storage/${profile.profile_picture_path}` : '/default-avatar.png'}
-                            alt="Foto Profil"
-                            width={150}
-                            height={150}
-                            className="rounded-full object-cover border-4 border-gray-200"
-                            onError={(e) => { e.currentTarget.src = '/default-avatar.png'; }} // Fallback jika gambar gagal dimuat
+                    <div className="flex-shrink-0 flex flex-col items-center w-full md:w-auto">
+                        <div className="relative group w-[150px] h-[150px]">
+                            {showImage ? (
+                                <Image
+                                    key={profileImagePath}
+                                    src={profileImagePath}
+                                    alt="Foto Profil"
+                                    width={150}
+                                    height={150}
+                                    className="rounded-full object-cover border-4 border-gray-200"
+                                    onError={() => setImageError(true)}
+                                    unoptimized={true} 
+                                />
+                            ) : (
+                                <div className="w-[150px] h-[150px] rounded-full bg-gray-200 flex items-center justify-center border-4 border-gray-200">
+                                    <span className="text-5xl font-bold text-gray-500">
+                                        {userInitial}
+                                    </span>
+                                </div>
+                            )}
+                            <button 
+                                onClick={() => fileInputRef.current?.click()}
+                                className="absolute inset-0 bg-transparent flex items-center justify-center rounded-full"
+                            >
+                                <span 
+                                    className="text-white text-3xl opacity-0 group-hover:opacity-100 transition-opacity duration-300"
+                                    style={{ textShadow: '0 2px 4px rgba(0, 0, 0, 0.5)' }}
+                                >
+                                    ✏️
+                                </span>
+                            </button>
+                        </div>
+                        <input
+                            type="file"
+                            ref={fileInputRef}
+                            onChange={handleFileChange}
+                            className="hidden"
+                            accept="image/png, image/jpeg, image/gif"
                         />
+                        {selectedFile && (
+                            <div className="mt-4 w-40 space-y-2">
+                                <Button onClick={handleUpload} disabled={isUploading}>
+                                    {isUploading ? 'Menyimpan...' : 'Simpan'}
+                                </Button>
+                                <Button onClick={handleCancelUpload} variant="secondary" disabled={isUploading}>
+                                    Batal
+                                </Button>
+                                {uploadError && <p className="text-xs text-red-600 text-center mt-1">{uploadError}</p>}
+                            </div>
+                        )}
                     </div>
-                    <div className="flex-grow">
+
+                    <div className="flex-grow w-full">
                         <div className="space-y-4">
                             <div>
                                 <h3 className="text-sm font-medium text-gray-500">Nama Lengkap</h3>
