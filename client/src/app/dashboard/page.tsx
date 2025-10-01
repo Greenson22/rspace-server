@@ -1,32 +1,35 @@
-// src/app/dashboard/page.tsx
+// rspace_server/client/src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArchiveList } from '@/components/fragments/ArchiveList';
+// Impor komponen-komponen yang sudah ada
 import { BackupList } from '@/components/fragments/BackupList';
 import { AboutContent } from '@/components/fragments/AboutContent';
-import { ProfileView } from '@/components/fragments/ProfileView'; // <-- 1. Impor komponen baru
+import { ProfileView } from '@/components/fragments/ProfileView';
 import { Card } from '@/components/elements/Card';
+// 1. Impor komponen arsip yang baru
+import ArchiveView from '@/components/fragments/ArchiveView';
 
 interface UserProfile { name: string; email: string; }
-// Tambahkan 'profile' ke tipe ActiveView
+// 2. Tambahkan 'archive' ke tipe ActiveView
 type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<ActiveView>('dashboard');
+    // Jadikan 'archive' sebagai tampilan default
+    const [activeView, setActiveView] = useState<ActiveView>('archive');
     const router = useRouter();
 
     useEffect(() => {
-        // ... (logika fetch profil tetap sama) ...
+        const token = localStorage.getItem('token');
+        if (!token) {
+            router.push('/login');
+            return;
+        }
+
         const fetchProfile = async () => {
-            const token = localStorage.getItem('token');
-            if (!token) {
-                router.push('/login');
-                return;
-            }
             try {
                 const res = await fetch('/api/profile', {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -44,7 +47,7 @@ export default function DashboardPage() {
         };
         fetchProfile();
     }, [router]);
-
+    
     const handleLogout = () => {
         localStorage.removeItem('token');
         router.push('/login');
@@ -52,15 +55,16 @@ export default function DashboardPage() {
 
     const renderContent = () => {
         switch (activeView) {
-            case 'archive': return <ArchiveList />;
+            // 3. Tambahkan case untuk 'archive'
+            case 'archive': return <ArchiveView />;
             case 'backup': return <BackupList />;
+            case 'profile': return <ProfileView />;
             case 'about': return <AboutContent />;
-            case 'profile': return <ProfileView />; // <-- 2. Tambahkan case untuk profil
             default:
                 return (
                     <Card>
                         <h2 className="text-2xl font-bold text-gray-900">Selamat Datang, {user?.name || 'Pengguna'}!</h2>
-                        <p className="mt-2 text-gray-600">Ini adalah halaman dasbor utama Anda. Pilih menu di atas untuk memulai.</p>
+                        <p className="mt-2 text-gray-600">Ini adalah halaman dasbor utama Anda.</p>
                         <p className="mt-1 text-gray-600">Email Anda terdaftar sebagai: {user?.email}</p>
                     </Card>
                 );
@@ -78,7 +82,6 @@ export default function DashboardPage() {
         return <div className="flex items-center justify-center min-h-screen"><p>Memuat...</p></div>;
     }
 
-    // Layout halaman dasbor diimplementasikan langsung di sini
     return (
         <div className="min-h-screen bg-gray-100">
             <nav className="bg-white shadow-sm">
@@ -88,9 +91,10 @@ export default function DashboardPage() {
                              <h1 className="text-xl font-bold text-indigo-600">RSpace</h1>
                              <div className="flex items-center space-x-2">
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
+                                {/* 4. Pastikan tombol navigasi Arsip ada */}
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
                                 <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
-                                <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a> {/* <-- 3. Tambahkan tombol navigasi Profil */}
+                                <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a>
                                 <a onClick={() => setActiveView('about')} className={getNavClass('about')}>Tentang</a>
                             </div>
                         </div>
