@@ -6,7 +6,11 @@
   "main": "index.js",
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only --ignore-watch client src/index.ts",
-    "build": "rimraf dist && tsc && cd client && npm run build",
+    
+    "build": "npm run build:server && npm run build:client",
+    "build:server": "rimraf dist && tsc",
+    "build:client": "cd client && npm run build",
+
     "start": "NODE_ENV=production node dist/index.js"
   },
   "author": "Google LLC",
