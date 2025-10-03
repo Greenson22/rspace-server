@@ -5,12 +5,8 @@
   "private": true,
   "main": "index.js",
   "scripts": {
-    "dev": "ts-node-dev --respawn --transpile-only --ignore-watch client src/index.ts",
-    
-    "build": "npm run build:server && npm run build:client",
-    "build:server": "rimraf dist && tsc",
-    "build:client": "cd client && npm run build",
-
+    "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+    "build": "rimraf dist && tsc",
     "start": "NODE_ENV=production node dist/index.js"
   },
   "author": "Google LLC",
@@ -26,7 +22,6 @@
     "fs-extra": "^11.3.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^2.0.2",
-    "next": "^15.5.4",
     "sqlite3": "^5.1.7",
     "uuid": "^11.1.0"
   },
