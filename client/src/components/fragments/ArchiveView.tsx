@@ -35,6 +35,7 @@ const ArchiveView = () => {
     const [error, setError] = useState('');
 
     const token = typeof window !== 'undefined' ? localStorage.getItem('token') : null;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
     // Efek untuk memuat topik awal
     useEffect(() => {
@@ -44,9 +45,14 @@ const ArchiveView = () => {
                 setLoading(false);
                 return;
             }
+            if (!apiUrl) {
+                setError('Konfigurasi API URL tidak ditemukan.');
+                setLoading(false);
+                return;
+            }
             try {
                 setLoading(true);
-                const res = await fetch('/api/archive/topics', {
+                const res = await fetch(`${apiUrl}/archive/topics`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 if (!res.ok) throw new Error('Gagal memuat topik arsip.');
@@ -63,7 +69,7 @@ const ArchiveView = () => {
             }
         };
         fetchTopics();
-    }, [token]);
+    }, [token, apiUrl]);
 
     // Handler untuk memilih topik
     const handleTopicSelect = async (topic: Topic) => {
@@ -72,8 +78,13 @@ const ArchiveView = () => {
         setDiscussions([]);
         setHtmlContent(null);
         setLoading(true);
+        if (!apiUrl) {
+            setError('Konfigurasi API URL tidak ditemukan.');
+            setLoading(false);
+            return;
+        }
         try {
-            const res = await fetch(`/api/archive/topics/${topic.name}/subjects`, {
+            const res = await fetch(`${apiUrl}/archive/topics/${topic.name}/subjects`, {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Gagal memuat subjek.');
@@ -92,12 +103,12 @@ const ArchiveView = () => {
 
     // Handler untuk memilih subjek
     const handleSubjectSelect = async (subject: Subject) => {
-        if (!selectedTopic) return;
+        if (!selectedTopic || !apiUrl) return;
         setSelectedSubject(subject);
         setHtmlContent(null);
         setLoading(true);
         try {
-            const res = await fetch(`/api/archive/topics/${selectedTopic.name}/subjects/${subject.name}/discussions`, {
+            const res = await fetch(`${apiUrl}/archive/topics/${selectedTopic.name}/subjects/${subject.name}/discussions`, {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Gagal memuat diskusi.');
@@ -116,8 +127,7 @@ const ArchiveView = () => {
     
     // Handler untuk melihat konten diskusi
     const handleDiscussionSelect = async (discussion: Discussion) => {
-        // === PERBAIKAN UTAMA ADA DI SINI ===
-        if (!discussion.filePath || !selectedTopic || !selectedSubject) {
+        if (!discussion.filePath || !selectedTopic || !selectedSubject || !apiUrl) {
             setError('Informasi tidak lengkap untuk membuka file.');
             return;
         }
@@ -127,10 +137,9 @@ const ArchiveView = () => {
         setError('');
 
         try {
-            // Rekonstruksi path relatif yang benar: "NamaTopik/NamaSubjek/namafile.html"
             const fullRelativePath = `${selectedTopic.name}/${selectedSubject.name}/${discussion.filePath}`;
             
-            const res = await fetch(`/api/archive/file?path=${encodeURIComponent(fullRelativePath)}`, {
+            const res = await fetch(`${apiUrl}/archive/file?path=${encodeURIComponent(fullRelativePath)}`, {
                  headers: { 'Authorization': `Bearer ${token}` },
             });
 
@@ -191,7 +200,6 @@ const ArchiveView = () => {
         if (error) return <div className="text-center p-8 text-red-500"><p>Error: {error}</p></div>;
         
         if(htmlContent) {
-            // Gunakan iframe untuk isolasi gaya (styling)
             return (
                  <iframe
                     srcDoc={htmlContent}
@@ -249,7 +257,6 @@ const ArchiveView = () => {
             {type === 'link' ? '🔗' : '✖️'}
         </span>
     );
-
 
     return (
         <Card>

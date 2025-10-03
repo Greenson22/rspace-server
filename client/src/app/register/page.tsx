@@ -20,17 +20,28 @@ export default function RegisterPage() {
         e.preventDefault();
         setError('');
         setSuccess('');
-        // ... (logika register tetap sama) ...
+
+        // Mengambil URL API dari environment variable
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+        if (!apiUrl) {
+            setError('Konfigurasi API URL tidak ditemukan.');
+            return;
+        }
+
         try {
-            const res = await fetch('/api/auth/register', {
+            // Menggunakan URL lengkap untuk request
+            const res = await fetch(`${apiUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ name, email, password }),
             });
+
+            const data = await res.json();
             if (!res.ok) {
-                const data = await res.json();
                 throw new Error(data.message || 'Gagal untuk mendaftar');
             }
+            
             setSuccess('Registrasi berhasil! Anda akan dialihkan ke halaman login.');
             setTimeout(() => {
                 router.push('/login');
@@ -54,6 +65,7 @@ export default function RegisterPage() {
                     label="Nama Lengkap"
                     type="text"
                     required
+                    autoComplete="name"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
@@ -62,6 +74,7 @@ export default function RegisterPage() {
                     label="Alamat Email"
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
@@ -70,6 +83,7 @@ export default function RegisterPage() {
                     label="Kata Sandi"
                     type="password"
                     required
+                    autoComplete="new-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />

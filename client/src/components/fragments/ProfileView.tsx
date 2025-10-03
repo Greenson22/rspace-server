@@ -28,6 +28,11 @@ export const ProfileView = () => {
     const [imageError, setImageError] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+    
+    // Mengambil URL API dari environment variable
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    // Mendapatkan base URL server untuk gambar
+    const serverBaseUrl = apiUrl ? apiUrl.replace('/api', '') : '';
 
     const fetchProfile = async () => {
         const token = localStorage.getItem('token');
@@ -36,16 +41,21 @@ export const ProfileView = () => {
             setLoading(false);
             return;
         }
+        if (!apiUrl) {
+            setError('Konfigurasi API URL tidak ditemukan.');
+            setLoading(false);
+            return;
+        }
 
         try {
-            const res = await fetch(`/api/profile?v=${new Date().getTime()}`, {
+            const res = await fetch(`${apiUrl}/profile?v=${new Date().getTime()}`, {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
             if (!res.ok) throw new Error('Gagal memuat data profil.');
             
             const data: UserProfile = await res.json();
             setProfile(data);
-        } catch (err) {
+        } catch (err: unknown) {
             if (err instanceof Error) {
                 setError(err.message);
             } else {
@@ -59,6 +69,7 @@ export const ProfileView = () => {
     useEffect(() => {
         setImageError(false);
         fetchProfile();
+         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     
     const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -87,6 +98,10 @@ export const ProfileView = () => {
             setUploadError('Sesi Anda telah berakhir. Silakan login kembali.');
             return;
         }
+        if (!apiUrl) {
+            setUploadError('Konfigurasi API URL tidak ditemukan.');
+            return;
+        }
 
         setIsUploading(true);
         setUploadError('');
@@ -95,7 +110,7 @@ export const ProfileView = () => {
         formData.append('profilePicture', selectedFile);
 
         try {
-            const res = await fetch('/api/profile/picture', {
+            const res = await fetch(`${apiUrl}/profile/picture`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
                 body: formData,
@@ -110,7 +125,7 @@ export const ProfileView = () => {
             await fetchProfile();
             setImageError(false);
 
-        } catch (err) {
+        } catch (err: unknown) {
             if (err instanceof Error) {
                 setUploadError(err.message);
             } else {
@@ -130,9 +145,9 @@ export const ProfileView = () => {
         });
     };
     
-    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const profileImageUrl = profile?.profile_picture_path 
-        ? `${baseUrl}/storage/${profile.profile_picture_path}` 
+    // Gunakan base URL dari server untuk gambar
+    const profileImageUrl = profile?.profile_picture_path && serverBaseUrl
+        ? `${serverBaseUrl}/storage/${profile.profile_picture_path}` 
         : null;
 
     const profileImagePath = previewUrl || profileImageUrl;

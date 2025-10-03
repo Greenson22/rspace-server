@@ -25,10 +25,17 @@ export const BackupList = () => {
                 return;
             }
 
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            if (!apiUrl) {
+                setError('Konfigurasi API URL tidak ditemukan.');
+                setLoading(false);
+                return;
+            }
+
             try {
                 const [rspaceRes, perpuskuRes] = await Promise.all([
-                    fetch('/api/backups/rspace', { headers: { 'Authorization': `Bearer ${token}` } }),
-                    fetch('/api/backups/perpusku', { headers: { 'Authorization': `Bearer ${token}` } })
+                    fetch(`${apiUrl}/backups/rspace`, { headers: { 'Authorization': `Bearer ${token}` } }),
+                    fetch(`${apiUrl}/backups/perpusku`, { headers: { 'Authorization': `Bearer ${token}` } })
                 ]);
 
                 if (!rspaceRes.ok || !perpuskuRes.ok) {

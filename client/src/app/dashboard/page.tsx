@@ -30,8 +30,17 @@ export default function DashboardPage() {
         }
 
         const fetchProfile = async () => {
+            // Mengambil URL API dari environment variable
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+            if (!apiUrl) {
+                console.error('Konfigurasi API URL tidak ditemukan.');
+                setLoading(false);
+                return;
+            }
+
             try {
-                const res = await fetch('/api/profile', {
+                // Menggunakan URL lengkap untuk request
+                const res = await fetch(`${apiUrl}/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
                 if (!res.ok) throw new Error('Gagal mengambil data profil');
