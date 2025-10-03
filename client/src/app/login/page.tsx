@@ -17,18 +17,28 @@ export default function LoginPage() {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
-        // ... (logika login tetap sama) ...
+        
+        // Mengambil URL API dari environment variable
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
+        if (!apiUrl) {
+            setError('Konfigurasi API URL tidak ditemukan.');
+            return;
+        }
+
         try {
-            const res = await fetch('/api/auth/login', {
+            // Menggunakan URL lengkap untuk request
+            const res = await fetch(`${apiUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ email, password }),
             });
+
+            const data = await res.json();
             if (!res.ok) {
-                const data = await res.json();
                 throw new Error(data.message || 'Gagal untuk login');
             }
-            const data = await res.json();
+            
             localStorage.setItem('token', data.token);
             router.push('/dashboard');
         } catch (err) {
@@ -50,6 +60,7 @@ export default function LoginPage() {
                     label="Alamat Email"
                     type="email"
                     required
+                    autoComplete="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
@@ -58,6 +69,7 @@ export default function LoginPage() {
                     label="Kata Sandi"
                     type="password"
                     required
+                    autoComplete="current-password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
