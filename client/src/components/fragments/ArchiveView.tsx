@@ -52,8 +52,12 @@ const ArchiveView = () => {
                 if (!res.ok) throw new Error('Gagal memuat topik arsip.');
                 const data = await res.json();
                 setTopics(data);
-            } catch (err: any) {
-                setError(err.message);
+            } catch (err: unknown) {
+                if (err instanceof Error) {
+                    setError(err.message);
+                } else {
+                    setError('Terjadi kesalahan yang tidak terduga');
+                }
             } finally {
                 setLoading(false);
             }
@@ -75,8 +79,12 @@ const ArchiveView = () => {
             if (!res.ok) throw new Error('Gagal memuat subjek.');
             const data = await res.json();
             setSubjects(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Terjadi kesalahan yang tidak terduga');
+            }
         } finally {
             setLoading(false);
         }
@@ -95,8 +103,12 @@ const ArchiveView = () => {
             if (!res.ok) throw new Error('Gagal memuat diskusi.');
             const data = await res.json();
             setDiscussions(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Terjadi kesalahan yang tidak terduga');
+            }
         } finally {
             setLoading(false);
         }
@@ -132,8 +144,12 @@ const ArchiveView = () => {
 
             const html = await res.text();
             setHtmlContent(html);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err: unknown) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Terjadi kesalahan yang tidak terduga');
+            }
         } finally {
             setLoading(false);
         }

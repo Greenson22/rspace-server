@@ -45,8 +45,12 @@ export const ProfileView = () => {
             
             const data: UserProfile = await res.json();
             setProfile(data);
-        } catch (err: any) {
-            setError(err.message);
+        } catch (err) {
+            if (err instanceof Error) {
+                setError(err.message);
+            } else {
+                setError('Terjadi kesalahan yang tidak terduga');
+            }
         } finally {
             setLoading(false);
         }
@@ -106,8 +110,12 @@ export const ProfileView = () => {
             await fetchProfile();
             setImageError(false);
 
-        } catch (err: any) {
-            setUploadError(err.message);
+        } catch (err) {
+            if (err instanceof Error) {
+                setUploadError(err.message);
+            } else {
+                setUploadError('Terjadi kesalahan yang tidak terduga');
+            }
         } finally {
             setIsUploading(false);
         }
