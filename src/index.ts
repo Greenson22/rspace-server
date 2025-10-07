@@ -25,9 +25,11 @@ import perpuskuFileRoutes from './routes/perpusku_file.routes';
 import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
 import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
 import archiveRoutes from './routes/archive.routes';
+import adminRoutes from './routes/admin.routes'; // <-- Impor rute admin
 
 // Middleware
 import { jwtAuth } from './middleware/jwt.middleware';
+import { adminAuth } from './middleware/admin.middleware'; // <-- Impor middleware admin
 
 // Gunakan port yang berbeda dari client, misalnya 3001
 const PORT = process.env.PORT || 3001;
@@ -51,6 +53,9 @@ app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, privateRspaceDownloadRoutes,
 app.use('/api/perpusku', jwtAuth, perpuskuUploadRoutes, perpuskuDownloadRoutes, perpuskuFileRoutes);
 app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDiscussionFileRoutes);
 app.use('/api/archive', jwtAuth, archiveRoutes);
+
+// Rute khusus Admin
+app.use('/api/admin', jwtAuth, adminAuth, adminRoutes); // <-- Tambahkan ini
 
 
 // Penanganan Error Global

@@ -26,3 +26,9 @@ export const validateLogin = [
         .notEmpty()
         .withMessage('Password tidak boleh kosong.')
 ];
+
+export const validatePasswordUpdate = [
+    body('newPassword')
+        .isLength({ min: 6 })
+        .withMessage('Password baru minimal harus 6 karakter.')
+];
