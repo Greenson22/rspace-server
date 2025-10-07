@@ -2,8 +2,8 @@
 
 import archiver from 'archiver';
 import path from 'path';
-import fs from 'fs';
-import { rootPath } from '../config/path';
+import fs from 'fs-extra'; // Gunakan fs-extra untuk operasi async
+import { getUserStoragePath } from '../config/path'; // Import helper path pengguna
 
 interface FileMetadata {
     uniqueName: string;
@@ -12,45 +12,40 @@ interface FileMetadata {
 }
 
 export const downloadSrcService = () => {
-    const sourceDir = path.join(rootPath, 'src');
+    const sourceDir = path.join(getUserStoragePath(1, 'Archive_data'), 'src'); // Contoh path, sesuaikan jika perlu
     const zipFileName = 'src-archive.zip';
     const archive = archiver('zip', { zlib: { level: 9 } });
-
     archive.directory(sourceDir, false);
-    
     return { archive, zipFileName };
 };
 
-// ## FUNGSI BARU DITAMBAHKAN ##
-// Fungsi untuk membuat arsip dari folder client/src
 export const downloadClientSrcService = () => {
-    const sourceDir = path.join(rootPath, 'client', 'src'); // Path diubah ke client/src
+    const sourceDir = path.join(getUserStoragePath(1, 'Archive_data'), 'client', 'src');
     const zipFileName = 'client-src-archive.zip';
     const archive = archiver('zip', { zlib: { level: 9 } });
-
     archive.directory(sourceDir, false);
-    
     return { archive, zipFileName };
 };
 
-export const downloadFileService = (uniqueName: string) => {
-    const storageDir = path.join(rootPath, 'storage', 'RSpace_data');
-    const metadataPath = path.join(storageDir, 'metadata.json');
+// ==> FUNGSI INI DIPERBARUI TOTAL MENJADI ASYNC DAN MENGGUNAKAN PATH PENGGUNA <==
+export const downloadFileService = async (userId: number, uniqueName: string) => {
+    // Dapatkan path penyimpanan RSpace khusus untuk pengguna ini
+    const userRspacePath = getUserStoragePath(userId, 'RSpace_data');
+    const metadataPath = path.join(userRspacePath, 'metadata.json');
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!await fs.pathExists(metadataPath)) {
         throw new Error('File metadata tidak ditemukan.');
     }
     
-    const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-    const metadata: FileMetadata[] = JSON.parse(metadataContent);
+    const metadata: FileMetadata[] = await fs.readJson(metadataPath);
 
     const fileData = metadata.find(file => file.uniqueName === uniqueName);
     if (!fileData) {
         throw new Error('File tidak ditemukan di dalam metadata.');
     }
     
-    const filePath = path.join(storageDir, uniqueName);
-    if (!fs.existsSync(filePath)) {
+    const filePath = path.join(userRspacePath, uniqueName);
+    if (!await fs.pathExists(filePath)) {
         throw new Error('File fisik tidak ditemukan di server.');
     }
 

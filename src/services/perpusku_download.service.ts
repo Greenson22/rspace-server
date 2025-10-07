@@ -1,6 +1,8 @@
+// src/services/perpusku_download.service.ts
+
 import path from 'path';
-import fs from 'fs';
-import { rootPath } from '../config/path';
+import fs from 'fs-extra'; // Gunakan fs-extra untuk operasi async
+import { getUserStoragePath } from '../config/path'; // Import helper path pengguna
 
 interface FileMetadata {
     uniqueName: string;
@@ -8,24 +10,25 @@ interface FileMetadata {
     createdAt: number;
 }
 
-export const downloadFileService = (uniqueName: string) => {
-    const storageDir = path.join(rootPath, 'storage', 'PerpusKu_data');
-    const metadataPath = path.join(storageDir, 'metadata.json');
+// ==> FUNGSI INI DIPERBARUI TOTAL MENJADI ASYNC DAN MENGGUNAKAN PATH PENGGUNA <==
+export const downloadFileService = async (userId: number, uniqueName: string) => {
+    // Dapatkan path penyimpanan PerpusKu khusus untuk pengguna ini
+    const userPerpuskuPath = getUserStoragePath(userId, 'PerpusKu_data');
+    const metadataPath = path.join(userPerpuskuPath, 'metadata.json');
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!await fs.pathExists(metadataPath)) {
         throw new Error('File metadata tidak ditemukan.');
     }
 
-    const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-    const metadata: FileMetadata[] = JSON.parse(metadataContent);
-
+    const metadata: FileMetadata[] = await fs.readJson(metadataPath);
     const fileData = metadata.find(file => file.uniqueName === uniqueName);
+    
     if (!fileData) {
         throw new Error('File tidak ditemukan di dalam metadata.');
     }
 
-    const filePath = path.join(storageDir, `${uniqueName}`);
-    if (!fs.existsSync(filePath)) {
+    const filePath = path.join(userPerpuskuPath, fileData.uniqueName);
+    if (!await fs.pathExists(filePath)) {
         throw new Error('File fisik tidak ditemukan di server.');
     }
 
