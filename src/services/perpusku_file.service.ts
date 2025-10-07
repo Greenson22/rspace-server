@@ -1,6 +1,8 @@
+// src/services/perpusku_file.service.ts
+
 import path from 'path';
-import fs from 'fs';
-import { rootPath } from '../config/path';
+import fs from 'fs-extra';
+import { getUserStoragePath } from '../config/path';
 
 interface FileMetadata {
     uniqueName: string;
@@ -8,15 +10,17 @@ interface FileMetadata {
     createdAt: number;
 }
 
-const metadataPath = path.join(rootPath, 'storage', 'PerpusKu_data', 'metadata.json');
+// ==> FUNGSI DIPERBARUI: Menerima userId <==
+export const getFileListService = async (userId: number) => {
+    // Gunakan helper untuk mendapatkan path direktori PerpusKu milik user
+    const userPerpuskuPath = getUserStoragePath(userId, 'PerpusKu_data');
+    const metadataPath = path.join(userPerpuskuPath, 'metadata.json');
 
-export const getFileListService = () => {
-    if (!fs.existsSync(metadataPath)) {
+    if (!await fs.pathExists(metadataPath)) {
         return [];
     }
 
-    const fileContent = fs.readFileSync(metadataPath, 'utf-8');
-    const metadata: FileMetadata[] = JSON.parse(fileContent);
+    const metadata: FileMetadata[] = await fs.readJson(metadataPath);
 
     const fileListWithDate = metadata.map(file => ({
         ...file,
@@ -29,14 +33,16 @@ export const getFileListService = () => {
     return fileListWithDate;
 };
 
-export const getFileDetailService = (uniqueName: string) => {
-    if (!fs.existsSync(metadataPath)) {
+// ==> FUNGSI DIPERBARUI: Menerima userId <==
+export const getFileDetailService = async (userId: number, uniqueName: string) => {
+    const userPerpuskuPath = getUserStoragePath(userId, 'PerpusKu_data');
+    const metadataPath = path.join(userPerpuskuPath, 'metadata.json');
+    
+    if (!await fs.pathExists(metadataPath)) {
         return null;
     }
 
-    const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-    const metadata: FileMetadata[] = JSON.parse(metadataContent);
-
+    const metadata: FileMetadata[] = await fs.readJson(metadataPath);
     const fileData = metadata.find(file => file.uniqueName === uniqueName);
 
     if (!fileData) {
@@ -51,27 +57,27 @@ export const getFileDetailService = (uniqueName: string) => {
     };
 };
 
-export const deleteFileService = (uniqueName: string) => {
-    const storageDir = path.join(rootPath, 'storage', 'PerpusKu_data');
+// ==> FUNGSI DIPERBARUI: Menerima userId <==
+export const deleteFileService = async (userId: number, uniqueName: string) => {
+    const userPerpuskuPath = getUserStoragePath(userId, 'PerpusKu_data');
+    const metadataPath = path.join(userPerpuskuPath, 'metadata.json');
 
-    if (!fs.existsSync(metadataPath)) {
+    if (!await fs.pathExists(metadataPath)) {
         throw new Error('File metadata tidak ditemukan.');
     }
 
-    const metadataContent = fs.readFileSync(metadataPath, 'utf-8');
-    let metadata: FileMetadata[] = JSON.parse(metadataContent);
-
+    let metadata: FileMetadata[] = await fs.readJson(metadataPath);
     const fileIndex = metadata.findIndex(file => file.uniqueName === uniqueName);
 
     if (fileIndex === -1) {
         throw new Error('Entri file tidak ditemukan di metadata.');
     }
 
-    const filePath = path.join(storageDir, uniqueName);
-    if (fs.existsSync(filePath)) {
-        fs.unlinkSync(filePath);
+    const filePath = path.join(userPerpuskuPath, uniqueName);
+    if (await fs.pathExists(filePath)) {
+        await fs.remove(filePath);
     }
 
     metadata.splice(fileIndex, 1);
-    fs.writeFileSync(metadataPath, JSON.stringify(metadata, null, 2));
+    await fs.writeJson(metadataPath, metadata, { spaces: 2 });
 };

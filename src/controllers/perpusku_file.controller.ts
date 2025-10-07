@@ -1,21 +1,26 @@
-import { Request, Response, NextFunction } from 'express';
-import { getFileListService, getFileDetailService, deleteFileService } from '../services/perpusku_file.service';
+// src/controllers/perpusku_file.controller.ts
 
-export const getFileList = (req: Request, res: Response, next: NextFunction) => {
+import { Request, Response, NextFunction } from 'express';
+import * as fileService from '../services/perpusku_file.service';
+
+export const getFileList = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const fileList = getFileListService();
+        // Ambil userId dari request yang sudah diautentikasi
+        const userId = req.user.userId;
+        const fileList = await fileService.getFileListService(userId);
         res.status(200).json(fileList);
     } catch (error) {
         next(error);
     }
 };
 
-export const getFileDetail = (req: Request, res: Response, next: NextFunction) => {
-    const { uniqueName } = req.params;
+export const getFileDetail = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        const fileData = getFileDetailService(uniqueName);
+        const userId = req.user.userId;
+        const { uniqueName } = req.params;
+        const fileData = await fileService.getFileDetailService(userId, uniqueName);
         if (!fileData) {
-            return res.status(404).json({ type: 'NotFound', message: 'File tidak ditemukan di dalam metadata.' });
+            return res.status(404).json({ message: 'File tidak ditemukan.' });
         }
         res.status(200).json(fileData);
     } catch (error) {
@@ -23,16 +28,13 @@ export const getFileDetail = (req: Request, res: Response, next: NextFunction) =
     }
 };
 
-export const deleteFile = (req: Request, res: Response, next: NextFunction) => {
-    const { uniqueName } = req.params;
+export const deleteFile = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        deleteFileService(uniqueName);
+        const userId = req.user.userId;
+        const { uniqueName } = req.params;
+        await fileService.deleteFileService(userId, uniqueName);
         res.status(200).json({ message: `File ${uniqueName} berhasil dihapus.` });
     } catch (error) {
-        const err = error as Error;
-        if (err.message.includes('metadata') || err.message.includes('Entri file')) {
-             return res.status(404).json({ type: 'NotFound', message: err.message });
-        }
         next(error);
     }
 };
