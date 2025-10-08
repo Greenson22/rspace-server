@@ -5,17 +5,19 @@ import db from './database.service';
 interface UserProfile {
     id: number;
     email: string;
+    username: string;
     name: string | null;
     birth_date: string | null;
     bio: string | null;
     profile_picture_path?: string; // Jadikan opsional
     createdAt: string;
+    isVerified: number; // Tambahkan ini
 }
 
 export const findUserById = (id: number): Promise<UserProfile> => {
     return new Promise((resolve, reject) => {
-        // PERBARUI SQL SELECT untuk mengambil path gambar
-        const sql = 'SELECT id, email, name, birth_date, bio, profile_picture_path, createdAt FROM users WHERE id = ?';
+        // PERBARUI SQL SELECT untuk mengambil semua kolom yang relevan
+        const sql = 'SELECT id, email, username, name, birth_date, bio, profile_picture_path, createdAt, isVerified FROM users WHERE id = ?';
         db.get(sql, [id], (err, row: UserProfile) => {
             if (err) {
                 return reject(new Error('Error server saat mencari pengguna.'));

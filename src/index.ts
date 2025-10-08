@@ -63,11 +63,13 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
 
     // ==> PERUBAHAN DI SINI <==
-    // Tambahkan pesan error verifikasi ke dalam kondisi ini
     if (
         err.message === 'Email sudah terdaftar.' || 
+        err.message === 'Username sudah digunakan.' ||
         err.message === 'Email atau password salah.' ||
-        err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda.'
+        err.message === 'Username/Email atau password salah.' ||
+        err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda.' ||
+        err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda, atau tunggu verifikasi manual dari Admin.'
     ) {
         return res.status(400).json({ type: 'AuthError', message: err.message });
     }
