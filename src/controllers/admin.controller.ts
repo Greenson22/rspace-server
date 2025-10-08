@@ -5,7 +5,6 @@ import * as adminService from '../services/admin.service';
 
 export const getAllUsers = async (req: Request, res: Response, next: NextFunction) => {
     try {
-        // Memanggil service untuk mendapatkan semua pengguna kecuali admin itu sendiri
         const users = await adminService.findAllUsers(req.user!.userId);
         res.json(users);
     } catch (error) {
@@ -23,6 +22,17 @@ export const updateUserPassword = async (req: Request, res: Response, next: Next
         const userIdToUpdate = parseInt(req.params.id, 10);
         const { newPassword } = req.body;
         const result = await adminService.updateUserPasswordById(userIdToUpdate, newPassword);
+        res.json(result);
+    } catch (error) {
+        next(error);
+    }
+};
+
+// ==> CONTROLLER BARU UNTUK VERIFIKASI MANUAL <==
+export const manuallyVerifyUser = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const userIdToVerify = parseInt(req.params.id, 10);
+        const result = await adminService.verifyUserById(userIdToVerify);
         res.json(result);
     } catch (error) {
         next(error);
