@@ -11,8 +11,8 @@ export const register = async (req: Request, res: Response, next: NextFunction) 
     }
 
     try {
-        const { email, password, name } = req.body;
-        const result = await authService.registerUser(email, password, name);
+        const { email, password, name, username } = req.body; // <-- Ambil username
+        const result = await authService.registerUser(email, password, name, username); // <-- Kirim username ke service
         res.status(201).json(result);
     } catch (error) {
         next(error);
@@ -26,22 +26,21 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 
     try {
-        const { email, password } = req.body;
-        const result = await authService.loginUser(email, password);
+        const { loginIdentifier, password } = req.body; // <-- Ambil loginIdentifier
+        const result = await authService.loginUser(loginIdentifier, password); // <-- Kirim loginIdentifier
         res.status(200).json(result);
     } catch (error) {
         next(error);
     }
 };
 
+// ... (fungsi verify dan resend tidak berubah) ...
 export const verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { token } = req.params;
         const result = await authService.verifyUser(token);
-        // Redirect ke halaman sukses di frontend Anda
         res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/verification-success`);
     } catch (error) {
-        // Redirect ke halaman gagal di frontend Anda
         const err = error as Error;
         res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/verification-failed?error=${encodeURIComponent(err.message)}`);
     }
