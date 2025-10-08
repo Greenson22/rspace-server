@@ -34,7 +34,6 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
     }
 };
 
-// ==> Controller BARU untuk verifikasi
 export const verify = async (req: Request, res: Response, next: NextFunction) => {
     try {
         const { token } = req.params;
@@ -45,5 +44,18 @@ export const verify = async (req: Request, res: Response, next: NextFunction) =>
         // Redirect ke halaman gagal di frontend Anda
         const err = error as Error;
         res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/verification-failed?error=${encodeURIComponent(err.message)}`);
+    }
+};
+
+export const resend = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { email } = req.body;
+        if (!email) {
+            return res.status(400).json({ message: 'Email dibutuhkan.' });
+        }
+        const result = await authService.resendVerification(email);
+        res.status(200).json(result);
+    } catch (error) {
+        next(error);
     }
 };

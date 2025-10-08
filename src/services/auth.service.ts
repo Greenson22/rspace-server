@@ -109,3 +109,42 @@ export const loginUser = (email: string, password: string): Promise<{ message: s
         });
     });
 };
+
+export const resendVerification = (email: string): Promise<{ message: string }> => {
+    return new Promise((resolve, reject) => {
+        const sqlFind = 'SELECT * FROM users WHERE email = ?';
+        db.get(sqlFind, [email], async (err, user: User) => {
+            if (err) {
+                return reject(new Error('Terjadi kesalahan pada server.'));
+            }
+            if (!user) {
+                return reject(new Error('Email tidak terdaftar.'));
+            }
+            if (user.isVerified) {
+                return reject(new Error('Akun ini sudah terverifikasi.'));
+            }
+
+            // Buat token verifikasi baru
+            const verificationToken = crypto.randomBytes(20).toString('hex');
+            const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+            const tokenExpires = new Date(Date.now() + 3600000).toISOString(); // 1 jam dari sekarang
+
+            // Update token di database
+            const sqlUpdate = 'UPDATE users SET verificationToken = ?, tokenExpires = ? WHERE email = ?';
+            db.run(sqlUpdate, [hashedToken, tokenExpires, email], async function(err) {
+                if (err) {
+                    return reject(new Error('Gagal memperbarui token verifikasi.'));
+                }
+
+                try {
+                    // Kirim ulang email verifikasi
+                    await sendVerificationEmail(email, verificationToken);
+                    resolve({ message: 'Email verifikasi baru telah dikirim.' });
+                } catch (emailError) {
+                    console.error("Gagal mengirim email verifikasi:", emailError);
+                    reject(new Error('Gagal mengirim ulang email verifikasi.'));
+                }
+            });
+        });
+    });
+};
