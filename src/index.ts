@@ -4,7 +4,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import express, { Request, Response, NextFunction } from 'express';
-import cors from 'cors'; // <-- Ditambahkan untuk menangani Cross-Origin Resource Sharing
+import cors from 'cors';
 import { MulterError } from 'multer';
 import path from 'path';
 import { rootPath } from './config/path';
@@ -25,18 +25,18 @@ import perpuskuFileRoutes from './routes/perpusku_file.routes';
 import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
 import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
 import archiveRoutes from './routes/archive.routes';
-import adminRoutes from './routes/admin.routes'; // <-- Impor rute admin
+import adminRoutes from './routes/admin.routes';
 
 // Middleware
 import { jwtAuth } from './middleware/jwt.middleware';
-import { adminAuth } from './middleware/admin.middleware'; // <-- Impor middleware admin
+import { adminAuth } from './middleware/admin.middleware';
 
 // Gunakan port yang berbeda dari client, misalnya 3001
 const PORT = process.env.PORT || 3001;
 const app = express();
 
 // Middleware global
-app.use(cors()); // <-- Mengizinkan permintaan dari domain lain (client Next.js Anda)
+app.use(cors());
 app.use(express.json());
 
 // Sajikan folder /storage secara statis
@@ -55,14 +55,20 @@ app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDisc
 app.use('/api/archive', jwtAuth, archiveRoutes);
 
 // Rute khusus Admin
-app.use('/api/admin', jwtAuth, adminAuth, adminRoutes); // <-- Tambahkan ini
+app.use('/api/admin', jwtAuth, adminAuth, adminRoutes);
 
 
 // Penanganan Error Global
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
 
-    if (err.message === 'Email sudah terdaftar.' || err.message === 'Email atau password salah.') {
+    // ==> PERUBAHAN DI SINI <==
+    // Tambahkan pesan error verifikasi ke dalam kondisi ini
+    if (
+        err.message === 'Email sudah terdaftar.' || 
+        err.message === 'Email atau password salah.' ||
+        err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda.'
+    ) {
         return res.status(400).json({ type: 'AuthError', message: err.message });
     }
 
