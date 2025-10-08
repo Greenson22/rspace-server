@@ -27,7 +27,11 @@ const initializeDb = () => {
                 birth_date TEXT,
                 bio TEXT,
                 profile_picture_path TEXT,
-                createdAt TEXT NOT NULL
+                createdAt TEXT NOT NULL,
+                -- KOLOM BARU --
+                isVerified INTEGER DEFAULT 0,
+                verificationToken TEXT,
+                tokenExpires TEXT
             )
         `;
         db.run(createUserTableSql, (err) => {
@@ -37,28 +41,28 @@ const initializeDb = () => {
             }
             console.log('Tabel "users" siap digunakan.');
 
-            // ==> LOGIKA MIGRASI DIMULAI DI SINI <==
-            // Cek apakah kolom 'profile_picture_path' sudah ada
+            // ==> LOGIKA MIGRASI UNTUK MENAMBAHKAN KOLOM BARU JIKA BELUM ADA <==
             db.all("PRAGMA table_info(users)", (err, columns: { name: string }[]) => {
                 if (err) {
                     console.error("Error saat memeriksa skema tabel users:", err.message);
                     return;
                 }
 
-                const columnExists = columns.some(col => col.name === 'profile_picture_path');
+                const hasIsVerified = columns.some(col => col.name === 'isVerified');
+                const hasVerificationToken = columns.some(col => col.name === 'verificationToken');
+                const hasTokenExpires = columns.some(col => col.name === 'tokenExpires');
 
-                if (!columnExists) {
-                    console.log("Menjalankan migrasi: Menambahkan kolom 'profile_picture_path' ke tabel 'users'...");
-                    db.run("ALTER TABLE users ADD COLUMN profile_picture_path TEXT", (alterErr) => {
-                        if (alterErr) {
-                            console.error("Gagal menjalankan migrasi:", alterErr.message);
-                        } else {
-                            console.log("Migrasi berhasil: Kolom 'profile_picture_path' telah ditambahkan.");
-                        }
-                    });
+                if (!hasIsVerified) {
+                    db.run("ALTER TABLE users ADD COLUMN isVerified INTEGER DEFAULT 0");
+                }
+                if (!hasVerificationToken) {
+                    db.run("ALTER TABLE users ADD COLUMN verificationToken TEXT");
+                }
+                if (!hasTokenExpires) {
+                    db.run("ALTER TABLE users ADD COLUMN tokenExpires TEXT");
                 }
             });
-            // ==> LOGIKA MIGRASI SELESAI <==
+            // ==> AKHIR LOGIKA MIGRASI <==
 
 
             // Logika untuk membuat admin default (tidak berubah)
@@ -79,7 +83,8 @@ const initializeDb = () => {
                             console.error('Gagal hash password default:', err.message);
                             return;
                         }
-                        const insertSql = 'INSERT INTO users (email, password, name, createdAt) VALUES (?, ?, ?, ?)';
+                        // Admin default langsung diverifikasi
+                        const insertSql = 'INSERT INTO users (email, password, name, createdAt, isVerified) VALUES (?, ?, ?, ?, 1)';
                         db.run(insertSql, [defaultEmail, hash, defaultName, createdAt], (err) => {
                             if (err) {
                                 console.error('Gagal membuat pengguna default:', err.message);
