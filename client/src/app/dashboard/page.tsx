@@ -10,6 +10,8 @@ import { Card } from '@/components/elements/Card';
 import ArchiveView from '@/components/fragments/ArchiveView';
 import { UserManagement } from '@/components/fragments/UserManagement';
 import { SharingView } from '@/components/fragments/SharingView';
+import { FeedView } from '@/components/fragments/FeedView'; // <-- IMPORT BARU
+// Impor helper
 import { getApiUrl } from '@/utils/apiConfig';
 
 interface UserProfile { 
@@ -18,12 +20,13 @@ interface UserProfile {
     email: string; 
 }
 
-type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users' | 'sharing';
+// Tambahkan 'feed' ke tipe tampilan aktif
+type ActiveView = 'feed' | 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users' | 'sharing';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    const [activeView, setActiveView] = useState<ActiveView>('archive');
+    const [activeView, setActiveView] = useState<ActiveView>('feed'); // <-- DEFAULT JADI 'feed'
     const router = useRouter();
 
     useEffect(() => {
@@ -35,6 +38,7 @@ export default function DashboardPage() {
 
         const fetchProfile = async () => {
             const apiUrl = getApiUrl();
+            
             try {
                 const res = await fetch(`${apiUrl}/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -62,6 +66,7 @@ export default function DashboardPage() {
 
     const renderContent = () => {
         switch (activeView) {
+            case 'feed': return <FeedView />; // <-- CASE BARU
             case 'archive': return <ArchiveView />;
             case 'backup': return <BackupList />;
             case 'profile': return <ProfileView />;
@@ -69,12 +74,13 @@ export default function DashboardPage() {
             case 'sharing': return <SharingView />;
             case 'users': 
                 return isAdmin ? <UserManagement /> : <Card><p>Akses Ditolak</p></Card>;
+            case 'dashboard':
             default:
                 return (
                     <Card>
-                        <h2 className="text-xl md:text-2xl font-bold text-gray-900">Selamat Datang, {user?.name || 'Pengguna'}!</h2>
-                        <p className="mt-2 text-sm md:text-base text-gray-600">Ini adalah halaman dasbor utama Anda.</p>
-                        <p className="mt-1 text-sm md:text-base text-gray-600">Email Anda terdaftar sebagai: {user?.email}</p>
+                        <h2 className="text-2xl font-bold text-gray-900">Selamat Datang, {user?.name || 'Pengguna'}!</h2>
+                        <p className="mt-2 text-gray-600">Ini adalah halaman dasbor statistik Anda (placeholder).</p>
+                        <p className="mt-1 text-gray-600">Email Anda terdaftar sebagai: {user?.email}</p>
                         {isAdmin && (
                             <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
                                 <p className="font-semibold text-yellow-800">Status Admin Aktif</p>
@@ -87,7 +93,7 @@ export default function DashboardPage() {
     };
 
     const getNavClass = (viewName: ActiveView) => 
-        `px-3 py-2 text-sm font-medium rounded-md cursor-pointer whitespace-nowrap transition-colors ${
+        `px-4 py-2 text-sm font-medium rounded-md cursor-pointer transition-colors whitespace-nowrap ${
             activeView === viewName
                 ? 'bg-indigo-100 text-indigo-700'
                 : 'text-gray-600 hover:bg-gray-200'
@@ -99,25 +105,15 @@ export default function DashboardPage() {
 
     return (
         <div className="min-h-screen bg-gray-100">
-            {/* Navigasi dibuat responsif */}
-            <nav className="bg-white shadow-sm sticky top-0 z-50">
+            <nav className="bg-white shadow-sm sticky top-0 z-10">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="flex flex-col md:flex-row md:items-center justify-between py-3 md:h-16 space-y-3 md:space-y-0">
-                        
-                        {/* Header Atas: Logo & Logout (Mobile Only) */}
-                        <div className="flex justify-between items-center w-full md:w-auto">
-                            <h1 className="text-xl font-bold text-indigo-600">RSpace</h1>
-                            <button
-                                onClick={handleLogout}
-                                className="md:hidden px-3 py-1 text-xs font-medium text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 border border-gray-200"
-                            >
-                                Keluar
-                            </button>
-                        </div>
-
-                        {/* Menu Scrollable Horizontal */}
-                        <div className="flex-1 w-full md:w-auto overflow-x-auto pb-2 md:pb-0 scrollbar-hide">
-                            <div className="flex items-center space-x-2 md:justify-center">
+                    <div className="flex justify-between h-16">
+                        <div className="flex items-center space-x-6 w-full">
+                             <h1 className="text-xl font-bold text-indigo-600 hidden md:block">RSpace</h1>
+                             <div className="flex items-center space-x-2 overflow-x-auto w-full md:w-auto pb-1 md:pb-0 scrollbar-hide">
+                                {/* Navigasi Beranda ditaruh paling depan */}
+                                <a onClick={() => setActiveView('feed')} className={getNavClass('feed')}>Beranda</a>
+                                
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
                                 <a onClick={() => setActiveView('sharing')} className={getNavClass('sharing')}>Sharing</a>
@@ -133,12 +129,10 @@ export default function DashboardPage() {
                                 <a onClick={() => setActiveView('about')} className={getNavClass('about')}>Tentang</a>
                             </div>
                         </div>
-
-                        {/* Tombol Logout (Desktop Only) */}
-                        <div className="hidden md:flex items-center">
+                        <div className="flex items-center ml-4">
                             <button
                                 onClick={handleLogout}
-                                className="px-3 py-2 text-sm font-medium text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200"
+                                className="px-3 py-2 text-sm font-medium text-gray-500 bg-gray-100 rounded-md hover:bg-gray-200 whitespace-nowrap"
                             >
                                 Keluar
                             </button>
@@ -146,7 +140,7 @@ export default function DashboardPage() {
                     </div>
                 </div>
             </nav>
-            <main className="py-6 md:py-10">
+            <main className="py-10">
                 <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
                     {renderContent()}
                 </div>

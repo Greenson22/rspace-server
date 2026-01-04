@@ -26,7 +26,8 @@ import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
 import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
 import archiveRoutes from './routes/archive.routes';
 import adminRoutes from './routes/admin.routes';
-import sharingRoutes from './routes/sharing.routes'; // <-- IMPORT BARU
+import sharingRoutes from './routes/sharing.routes';
+import socialRoutes from './routes/social.routes'; // <-- IMPORT BARU
 
 // Middleware
 import { jwtAuth } from './middleware/jwt.middleware';
@@ -54,7 +55,8 @@ app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, privateRspaceDownloadRoutes,
 app.use('/api/perpusku', jwtAuth, perpuskuUploadRoutes, perpuskuDownloadRoutes, perpuskuFileRoutes);
 app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDiscussionFileRoutes);
 app.use('/api/archive', jwtAuth, archiveRoutes);
-app.use('/api/sharing', jwtAuth, sharingRoutes); // <-- RUTE BARU DITAMBAHKAN
+app.use('/api/sharing', jwtAuth, sharingRoutes);
+app.use('/api/social', jwtAuth, socialRoutes); // <-- RUTE BARU DITAMBAHKAN
 
 // Rute khusus Admin
 app.use('/api/admin', jwtAuth, adminAuth, adminRoutes);

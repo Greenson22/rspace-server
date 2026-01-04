@@ -18,11 +18,12 @@ const db = new sqlite3.Database(dbPath, (err) => {
 
 const initializeDb = () => {
     db.serialize(() => {
+        // --- TABEL USERS (Eksisting) ---
         const createUserTableSql = `
             CREATE TABLE IF NOT EXISTS users (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL UNIQUE,
-                username TEXT NOT NULL UNIQUE, -- Kolom baru
+                username TEXT NOT NULL UNIQUE,
                 password TEXT NOT NULL,
                 name TEXT,
                 birth_date TEXT,
@@ -41,23 +42,12 @@ const initializeDb = () => {
             }
             console.log('Tabel "users" siap digunakan.');
 
-            // Logika migrasi untuk menambahkan kolom jika belum ada
+            // Logika migrasi untuk kolom user (Eksisting)
             db.all("PRAGMA table_info(users)", (err, columns: { name: string }[]) => {
-                if (err) {
-                    console.error("Error saat memeriksa skema tabel users:", err.message);
-                    return;
-                }
-
+                if (err) return;
                 const columnNames = columns.map(col => col.name);
-
                 if (!columnNames.includes('username')) {
-                    db.run("ALTER TABLE users ADD COLUMN username TEXT UNIQUE", (alterErr) => {
-                        if (alterErr) {
-                           console.log("Kolom 'username' sudah ada atau gagal ditambahkan.");
-                        } else {
-                           console.log("Migrasi berhasil: Kolom 'username' telah ditambahkan.");
-                        }
-                    });
+                    db.run("ALTER TABLE users ADD COLUMN username TEXT UNIQUE");
                 }
                 if (!columnNames.includes('isVerified')) {
                     db.run("ALTER TABLE users ADD COLUMN isVerified INTEGER DEFAULT 0");
@@ -70,14 +60,9 @@ const initializeDb = () => {
                 }
             });
 
-
-            // Logika membuat admin default
+            // Logika Admin Default (Eksisting)
             db.get('SELECT COUNT(*) as count FROM users', (err, row: { count: number }) => {
-                if (err) {
-                    console.error('Gagal memeriksa data pengguna:', err.message);
-                    return;
-                }
-                if (row.count === 0) {
+                if (!err && row.count === 0) {
                     console.log('Tabel pengguna kosong, membuat akun Admin default...');
                     const defaultEmail = 'admin@rspace.com';
                     const defaultUsername = 'admin';
@@ -86,23 +71,51 @@ const initializeDb = () => {
                     const createdAt = new Date().toISOString();
 
                     bcrypt.hash(defaultPassword, 10, (err, hash) => {
-                        if (err) {
-                            console.error('Gagal hash password default:', err.message);
-                            return;
+                        if (!err) {
+                            db.run('INSERT INTO users (email, username, password, name, createdAt, isVerified) VALUES (?, ?, ?, ?, ?, 1)', 
+                                [defaultEmail, defaultUsername, hash, defaultName, createdAt]);
+                            console.log(`Pengguna default '${defaultEmail}' berhasil dibuat.`);
                         }
-                        // Admin default langsung diverifikasi
-                        const insertSql = 'INSERT INTO users (email, username, password, name, createdAt, isVerified) VALUES (?, ?, ?, ?, ?, 1)';
-                        db.run(insertSql, [defaultEmail, defaultUsername, hash, defaultName, createdAt], (err) => {
-                            if (err) {
-                                console.error('Gagal membuat pengguna default:', err.message);
-                            } else {
-                                console.log(`Pengguna default '${defaultEmail}' berhasil dibuat.`);
-                            }
-                        });
                     });
                 }
             });
         });
+
+        // --- TABEL SOSIAL MEDIA (BARU) ---
+        
+        // 1. Tabel Postingan
+        db.run(`CREATE TABLE IF NOT EXISTS posts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            imagePath TEXT,
+            createdAt TEXT NOT NULL,
+            FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE
+        )`);
+
+        // 2. Tabel Likes
+        db.run(`CREATE TABLE IF NOT EXISTS post_likes (
+            userId INTEGER NOT NULL,
+            postId INTEGER NOT NULL,
+            PRIMARY KEY (userId, postId),
+            FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(postId) REFERENCES posts(id) ON DELETE CASCADE
+        )`);
+
+        // 3. Tabel Komentar
+        db.run(`CREATE TABLE IF NOT EXISTS post_comments (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            userId INTEGER NOT NULL,
+            postId INTEGER NOT NULL,
+            content TEXT NOT NULL,
+            createdAt TEXT NOT NULL,
+            FOREIGN KEY(userId) REFERENCES users(id) ON DELETE CASCADE,
+            FOREIGN KEY(postId) REFERENCES posts(id) ON DELETE CASCADE
+        )`, (err) => {
+            if (err) console.error("Gagal membuat tabel sosial media:", err.message);
+            else console.log('Tabel Sosial Media (Posts, Likes, Comments) siap.');
+        });
+
     });
 };
 
