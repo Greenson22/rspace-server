@@ -3,22 +3,27 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-// Impor komponen-komponen yang sudah ada
 import { BackupList } from '@/components/fragments/BackupList';
 import { AboutContent } from '@/components/fragments/AboutContent';
 import { ProfileView } from '@/components/fragments/ProfileView';
 import { Card } from '@/components/elements/Card';
-// 1. Impor komponen arsip yang baru
 import ArchiveView from '@/components/fragments/ArchiveView';
+// 1. Impor komponen baru
+import { UserManagement } from '@/components/fragments/UserManagement';
 
-interface UserProfile { name: string; email: string; }
-// 2. Tambahkan 'archive' ke tipe ActiveView
-type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile';
+// 2. Tambahkan 'id' ke interface UserProfile untuk pengecekan admin
+interface UserProfile { 
+    id: number; // PENTING: ID diperlukan untuk cek admin
+    name: string; 
+    email: string; 
+}
+
+// 3. Tambahkan 'users' ke tipe ActiveView
+type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
-    // Jadikan 'archive' sebagai tampilan default
     const [activeView, setActiveView] = useState<ActiveView>('archive');
     const router = useRouter();
 
@@ -30,16 +35,13 @@ export default function DashboardPage() {
         }
 
         const fetchProfile = async () => {
-            // Mengambil URL API dari environment variable
             const apiUrl = process.env.NEXT_PUBLIC_API_URL;
             if (!apiUrl) {
-                console.error('Konfigurasi API URL tidak ditemukan.');
                 setLoading(false);
                 return;
             }
 
             try {
-                // Menggunakan URL lengkap untuk request
                 const res = await fetch(`${apiUrl}/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` },
                 });
@@ -62,19 +64,31 @@ export default function DashboardPage() {
         router.push('/login');
     };
 
+    // 4. Logika cek admin (Asumsi Admin selalu ID 1 sesuai backend Anda)
+    const isAdmin = user?.id === 1;
+
     const renderContent = () => {
         switch (activeView) {
-            // 3. Tambahkan case untuk 'archive'
             case 'archive': return <ArchiveView />;
             case 'backup': return <BackupList />;
             case 'profile': return <ProfileView />;
             case 'about': return <AboutContent />;
+            // 5. Tambahkan render case untuk users
+            case 'users': 
+                // Proteksi tambahan: jika bukan admin, kembalikan ke dashboard
+                return isAdmin ? <UserManagement /> : <Card><p>Akses Ditolak</p></Card>;
             default:
                 return (
                     <Card>
                         <h2 className="text-2xl font-bold text-gray-900">Selamat Datang, {user?.name || 'Pengguna'}!</h2>
                         <p className="mt-2 text-gray-600">Ini adalah halaman dasbor utama Anda.</p>
                         <p className="mt-1 text-gray-600">Email Anda terdaftar sebagai: {user?.email}</p>
+                        {isAdmin && (
+                            <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-md">
+                                <p className="font-semibold text-yellow-800">Status Admin Aktif</p>
+                                <p className="text-sm text-yellow-700">Anda memiliki akses ke menu Manajemen User.</p>
+                            </div>
+                        )}
                     </Card>
                 );
         }
@@ -100,10 +114,17 @@ export default function DashboardPage() {
                              <h1 className="text-xl font-bold text-indigo-600">RSpace</h1>
                              <div className="flex items-center space-x-2">
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
-                                {/* 4. Pastikan tombol navigasi Arsip ada */}
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
                                 <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
                                 <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a>
+                                
+                                {/* 6. Menu Navigasi Kondisional hanya untuk Admin */}
+                                {isAdmin && (
+                                    <a onClick={() => setActiveView('users')} className={getNavClass('users')}>
+                                        Manajemen User
+                                    </a>
+                                )}
+                                
                                 <a onClick={() => setActiveView('about')} className={getNavClass('about')}>Tentang</a>
                             </div>
                         </div>
