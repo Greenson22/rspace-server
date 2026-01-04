@@ -10,7 +10,7 @@ import { Button } from '@/components/elements/Button';
 
 export default function RegisterPage() {
     const [name, setName] = useState('');
-    const [username, setUsername] = useState(''); // 1. Tambah state username
+    const [username, setUsername] = useState(''); // Pastikan state username ada
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -33,24 +33,25 @@ export default function RegisterPage() {
             const res = await fetch(`${apiUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                // 2. Sertakan username dalam body request
                 body: JSON.stringify({ name, username, email, password }),
             });
 
             const data = await res.json();
             
             if (!res.ok) {
-                // Handle pesan error dari validator backend (array of errors)
                 if (data.errors && Array.isArray(data.errors)) {
                      throw new Error(data.errors[0].msg);
                 }
                 throw new Error(data.message || 'Gagal untuk mendaftar');
             }
             
-            setSuccess('Registrasi berhasil! Anda akan dialihkan ke halaman login.');
+            // PERUBAHAN: Pesan notifikasi yang jelas untuk user
+            setSuccess('Registrasi berhasil! Akun Anda sedang menunggu verifikasi dari Admin sebelum dapat digunakan.');
+            
+            // Opsional: Perpanjang waktu redirect agar user sempat membaca pesan
             setTimeout(() => {
                 router.push('/login');
-            }, 2000);
+            }, 4000); 
         } catch (err) {
             if (err instanceof Error) {
                 setError(err.message);
@@ -74,8 +75,7 @@ export default function RegisterPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
-                
-                {/* 3. Tambahkan Input Field untuk Username */}
+                 {/* Input Username (Wajib ada) */}
                 <InputField
                     id="username"
                     label="Username"
@@ -85,7 +85,6 @@ export default function RegisterPage() {
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                 />
-
                 <InputField
                     id="email"
                     label="Alamat Email"
@@ -105,7 +104,14 @@ export default function RegisterPage() {
                     onChange={(e) => setPassword(e.target.value)}
                 />
                 {error && <p className="text-sm text-red-600">{error}</p>}
-                {success && <p className="text-sm text-green-600">{success}</p>}
+                
+                {/* Tampilan pesan sukses yang lebih menonjol */}
+                {success && (
+                    <div className="p-4 bg-green-50 border border-green-200 rounded-md">
+                        <p className="text-sm text-green-700 font-medium text-center">{success}</p>
+                    </div>
+                )}
+                
                 <Button type="submit">Daftar</Button>
             </form>
             <p className="text-sm text-center text-gray-600">

@@ -3,8 +3,8 @@
 import db from './database.service';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
-import crypto from 'crypto';
-import { sendVerificationEmail } from './email.service';
+// import crypto from 'crypto'; // Tidak lagi dibutuhkan untuk registrasi
+// import { sendVerificationEmail } from './email.service'; // Tidak lagi dibutuhkan
 
 interface User {
     username: any;
@@ -24,13 +24,12 @@ export const registerUser = (email: string, password: string, name: string, user
             }
 
             const createdAt = new Date().toISOString();
-            const verificationToken = crypto.randomBytes(20).toString('hex');
-            const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-            const tokenExpires = new Date(Date.now() + 3600000).toISOString(); // 1 jam dari sekarang
-
-            const sql = 'INSERT INTO users (email, password, name, username, createdAt, verificationToken, tokenExpires) VALUES (?, ?, ?, ?, ?, ?, ?)';
             
-            db.run(sql, [email, hash, name, username, createdAt, hashedToken, tokenExpires], async function (err) {
+            // PERUBAHAN 1: Kita set verificationToken dan tokenExpires menjadi NULL
+            // karena kita menggunakan verifikasi manual.
+            const sql = 'INSERT INTO users (email, password, name, username, createdAt, verificationToken, tokenExpires) VALUES (?, ?, ?, ?, ?, NULL, NULL)';
+            
+            db.run(sql, [email, hash, name, username, createdAt], async function (err) {
                 if (err) {
                     if (err.message.includes('UNIQUE constraint failed: users.email')) {
                         return reject(new Error('Email sudah terdaftar.'));
@@ -41,32 +40,17 @@ export const registerUser = (email: string, password: string, name: string, user
                     return reject(new Error('Gagal mendaftarkan pengguna.'));
                 }
                 
-                try {
-                    await sendVerificationEmail(email, verificationToken);
-                    resolve({ message: 'Registrasi berhasil! Silakan periksa email Anda untuk verifikasi.' });
-                } catch (emailError) {
-                    console.error("Gagal mengirim email verifikasi:", emailError);
-                    reject(new Error('Registrasi berhasil, tetapi gagal mengirim email verifikasi.'));
-                }
+                // PERUBAHAN 2: Hapus pengiriman email dan update pesan sukses
+                resolve({ message: 'Registrasi berhasil! Mohon tunggu verifikasi manual dari Admin agar akun Anda aktif.' });
             });
         });
     });
 };
 
+// ... (fungsi verifyUser tetap ada jika ingin disimpan, atau bisa dihapus) ...
 export const verifyUser = (token: string): Promise<{ message: string }> => {
-    return new Promise((resolve, reject) => {
-        const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
-        const sql = `
-            UPDATE users 
-            SET isVerified = 1, verificationToken = NULL, tokenExpires = NULL 
-            WHERE verificationToken = ? AND tokenExpires > ?
-        `;
-        db.run(sql, [hashedToken, new Date().toISOString()], function(err) {
-            if (err) { return reject(new Error('Gagal memverifikasi akun.')); }
-            if (this.changes === 0) { return reject(new Error('Token verifikasi tidak valid atau sudah kedaluwarsa.')); }
-            resolve({ message: 'Akun Anda telah berhasil diverifikasi!' });
-        });
-    });
+   // ... (kode lama biarkan saja atau hapus jika mau bersih total)
+   return Promise.reject(new Error('Fitur verifikasi email dinonaktifkan.'));
 };
 
 export const loginUser = (loginIdentifier: string, password: string): Promise<{ message: string, token: string }> => {
@@ -84,7 +68,8 @@ export const loginUser = (loginIdentifier: string, password: string): Promise<{ 
             }
 
             if (user.isVerified === 0) {
-                return reject(new Error('Akun Anda belum diverifikasi. Silakan periksa email Anda, atau tunggu verifikasi manual dari Admin.'));
+                // PERUBAHAN 3: Update pesan error login
+                return reject(new Error('Akun Anda belum diverifikasi oleh Admin. Silakan hubungi Admin untuk aktivasi.'));
             }
 
             bcrypt.compare(password, user.password, (err, isMatch) => {
@@ -106,26 +91,6 @@ export const loginUser = (loginIdentifier: string, password: string): Promise<{ 
 };
 
 export const resendVerification = (email: string): Promise<{ message: string }> => {
-    return new Promise((resolve, reject) => {
-        const sqlFind = 'SELECT * FROM users WHERE email = ?';
-        db.get(sqlFind, [email], async (err, user: User) => {
-            if (err) { return reject(new Error('Terjadi kesalahan pada server.')); }
-            if (!user) { return reject(new Error('Email tidak terdaftar.')); }
-            if (user.isVerified) { return reject(new Error('Akun ini sudah terverifikasi.')); }
-            const verificationToken = crypto.randomBytes(20).toString('hex');
-            const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
-            const tokenExpires = new Date(Date.now() + 3600000).toISOString();
-            const sqlUpdate = 'UPDATE users SET verificationToken = ?, tokenExpires = ? WHERE email = ?';
-            db.run(sqlUpdate, [hashedToken, tokenExpires, email], async function(err) {
-                if (err) { return reject(new Error('Gagal memperbarui token verifikasi.')); }
-                try {
-                    await sendVerificationEmail(email, verificationToken);
-                    resolve({ message: 'Email verifikasi baru telah dikirim.' });
-                } catch (emailError) {
-                    console.error("Gagal mengirim email verifikasi:", emailError);
-                    reject(new Error('Gagal mengirim ulang email verifikasi.'));
-                }
-            });
-        });
-    });
+    // Nonaktifkan fitur resend karena verifikasi manual
+    return Promise.reject(new Error('Verifikasi dilakukan secara manual oleh Admin.'));
 };
