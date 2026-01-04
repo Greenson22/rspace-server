@@ -9,6 +9,7 @@ import { InputField } from '@/components/fragments/InputField';
 import { Button } from '@/components/elements/Button';
 
 export default function LoginPage() {
+    // State tetap menggunakan nama 'email' agar sesuai dengan input form
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -18,7 +19,6 @@ export default function LoginPage() {
         e.preventDefault();
         setError('');
         
-        // Mengambil URL API dari environment variable
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         if (!apiUrl) {
@@ -27,40 +27,48 @@ export default function LoginPage() {
         }
 
         try {
-            // Menggunakan URL lengkap untuk request
             const res = await fetch(`${apiUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                // PERBAIKAN DI SINI:
+                // Backend mengharapkan field 'loginIdentifier', bukan 'email'.
+                // Kita petakan value 'email' dari state ke key 'loginIdentifier'.
+                body: JSON.stringify({ 
+                    loginIdentifier: email, 
+                    password: password 
+                }),
             });
 
-            // PERBAIKAN: Cek status dulu sebelum mencoba parsing JSON
             if (!res.ok) {
-                // Ambil respons sebagai teks mentah untuk menghindari crash jika isinya HTML
                 const errorText = await res.text();
-                
                 try {
-                    // Coba parse teks tersebut sebagai JSON (jika backend mengirim error JSON valid)
                     const errorJson = JSON.parse(errorText);
+                    
+                    // Handle format error array dari express-validator (seperti di log Anda)
+                    if (errorJson.errors && Array.isArray(errorJson.errors)) {
+                         // Ambil pesan error pertama dari array
+                        throw new Error(errorJson.errors[0].msg);
+                    }
+                    
                     throw new Error(errorJson.message || 'Gagal untuk login');
                 } catch (jsonError) {
-                    // Jika gagal diparse (berarti isinya HTML atau string biasa),
-                    // Tampilkan pesan error yang aman berdasarkan status code
-                    console.error("Server Error Response (Raw):", errorText); // Log untuk debugging developer
-                    
+                    // Fallback jika error bukan JSON valid
+                    console.error("Server Error Response (Raw):", errorText);
+                    if (jsonError instanceof Error && jsonError.message !== "Unexpected token..." ) {
+                        throw jsonError; // Lempar error yang sudah kita tangkap di atas (dari errorJson)
+                    }
+
                     if (res.status === 404) {
-                        throw new Error('URL API tidak ditemukan (404). Cek konfigurasi NEXT_PUBLIC_API_URL.');
+                        throw new Error('Endpoint login tidak ditemukan (404).');
                     } else if (res.status === 500) {
                         throw new Error('Terjadi kesalahan internal pada server (500).');
                     } else {
-                        throw new Error(`Terjadi kesalahan server (Status: ${res.status}).`);
+                        throw new Error(`Gagal Login (Status: ${res.status}).`);
                     }
                 }
             }
 
-            // Jika status OK, aman untuk parsing JSON
             const data = await res.json();
-            
             localStorage.setItem('token', data.token);
             router.push('/dashboard');
         } catch (err) {
@@ -79,10 +87,10 @@ export default function LoginPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <InputField
                     id="email"
-                    label="Alamat Email"
-                    type="email"
+                    label="Alamat Email / Username" 
+                    type="text" // Ubah ke text agar bisa terima username juga jika backend mendukung
                     required
-                    autoComplete="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                 />
