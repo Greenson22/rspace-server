@@ -26,6 +26,7 @@ import finishedDiscussionUploadRoutes from './routes/discussion_upload.routes';
 import finishedDiscussionFileRoutes from './routes/discussion_file.routes';
 import archiveRoutes from './routes/archive.routes';
 import adminRoutes from './routes/admin.routes';
+import sharingRoutes from './routes/sharing.routes'; // <-- IMPORT BARU
 
 // Middleware
 import { jwtAuth } from './middleware/jwt.middleware';
@@ -53,6 +54,7 @@ app.use('/api/rspace', jwtAuth, rspaceUploadRoutes, privateRspaceDownloadRoutes,
 app.use('/api/perpusku', jwtAuth, perpuskuUploadRoutes, perpuskuDownloadRoutes, perpuskuFileRoutes);
 app.use('/api/discussion', jwtAuth, finishedDiscussionUploadRoutes, finishedDiscussionFileRoutes);
 app.use('/api/archive', jwtAuth, archiveRoutes);
+app.use('/api/sharing', jwtAuth, sharingRoutes); // <-- RUTE BARU DITAMBAHKAN
 
 // Rute khusus Admin
 app.use('/api/admin', jwtAuth, adminAuth, adminRoutes);
@@ -62,7 +64,6 @@ app.use('/api/admin', jwtAuth, adminAuth, adminRoutes);
 app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
     console.error(err);
 
-    // ==> PERUBAHAN DI SINI: Menambahkan pesan error verifikasi ke whitelist <==
     if (
         err.message === 'Email sudah terdaftar.' || 
         err.message === 'Username sudah digunakan.' ||
@@ -70,7 +71,6 @@ app.use((err: Error, req: Request, res: Response, next: NextFunction) => {
         err.message === 'Username/Email atau password salah.' ||
         err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda.' ||
         err.message === 'Akun Anda belum diverifikasi. Silakan periksa email Anda, atau tunggu verifikasi manual dari Admin.' ||
-        // Tambahan pesan spesifik dari auth.service.ts:
         err.message === 'Akun Anda belum diverifikasi oleh Admin. Silakan hubungi Admin untuk aktivasi.'
     ) {
         return res.status(400).json({ type: 'AuthError', message: err.message });

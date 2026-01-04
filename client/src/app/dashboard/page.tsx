@@ -8,18 +8,18 @@ import { AboutContent } from '@/components/fragments/AboutContent';
 import { ProfileView } from '@/components/fragments/ProfileView';
 import { Card } from '@/components/elements/Card';
 import ArchiveView from '@/components/fragments/ArchiveView';
-// 1. Impor komponen baru
 import { UserManagement } from '@/components/fragments/UserManagement';
+// 1. Impor komponen SharingView
+import { SharingView } from '@/components/fragments/SharingView';
 
-// 2. Tambahkan 'id' ke interface UserProfile untuk pengecekan admin
 interface UserProfile { 
-    id: number; // PENTING: ID diperlukan untuk cek admin
+    id: number;
     name: string; 
     email: string; 
 }
 
-// 3. Tambahkan 'users' ke tipe ActiveView
-type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users';
+// 2. Tambahkan 'sharing' ke tipe ActiveView
+type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users' | 'sharing';
 
 export default function DashboardPage() {
     const [user, setUser] = useState<UserProfile | null>(null);
@@ -64,7 +64,6 @@ export default function DashboardPage() {
         router.push('/login');
     };
 
-    // 4. Logika cek admin (Asumsi Admin selalu ID 1 sesuai backend Anda)
     const isAdmin = user?.id === 1;
 
     const renderContent = () => {
@@ -73,9 +72,9 @@ export default function DashboardPage() {
             case 'backup': return <BackupList />;
             case 'profile': return <ProfileView />;
             case 'about': return <AboutContent />;
-            // 5. Tambahkan render case untuk users
+            // 3. Tambahkan render case untuk sharing
+            case 'sharing': return <SharingView />;
             case 'users': 
-                // Proteksi tambahan: jika bukan admin, kembalikan ke dashboard
                 return isAdmin ? <UserManagement /> : <Card><p>Akses Ditolak</p></Card>;
             default:
                 return (
@@ -115,10 +114,13 @@ export default function DashboardPage() {
                              <div className="flex items-center space-x-2">
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
+                                
+                                {/* 4. Tambahkan Menu Navigasi Sharing */}
+                                <a onClick={() => setActiveView('sharing')} className={getNavClass('sharing')}>Sharing</a>
+                                
                                 <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
                                 <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a>
                                 
-                                {/* 6. Menu Navigasi Kondisional hanya untuk Admin */}
                                 {isAdmin && (
                                     <a onClick={() => setActiveView('users')} className={getNavClass('users')}>
                                         Manajemen User
