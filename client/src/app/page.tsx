@@ -1,117 +1,63 @@
-// src/app/login/page.tsx
-"use client";
-
-import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
-import { AuthLayout } from '@/components/layouts/AuthLayout';
-import { InputField } from '@/components/fragments/InputField';
-import { Button } from '@/components/elements/Button';
 
-export default function LoginPage() {
-    // State tetap menggunakan nama 'email' agar sesuai dengan input form
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [error, setError] = useState('');
-    const router = useRouter();
-
-    const handleSubmit = async (e: React.FormEvent) => {
-        e.preventDefault();
-        setError('');
+export default function LandingPage() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex flex-col items-center justify-center p-6">
+      <div className="max-w-3xl w-full text-center space-y-8">
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        {/* Header Section */}
+        <div className="space-y-4">
+          <h1 className="text-5xl font-extrabold text-indigo-600 tracking-tight">
+            RSpace
+          </h1>
+          <p className="text-2xl text-gray-700 font-medium">
+            Manajemen Arsip & Data Terpusat
+          </p>
+          <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
+            Platform all-in-one untuk mengelola arsip diskusi, mencadangkan file penting dari berbagai sumber, 
+            dan manajemen pengguna yang efisien. Aman, cepat, dan mudah digunakan.
+          </p>
+        </div>
 
-        if (!apiUrl) {
-            setError('Konfigurasi API URL tidak ditemukan.');
-            return;
-        }
+        {/* Action Buttons */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+          <Link 
+            href="/login" 
+            className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl"
+          >
+            Masuk Sekarang
+          </Link>
+          <Link 
+            href="/register" 
+            className="w-full sm:w-auto px-8 py-3 bg-white text-indigo-600 border border-indigo-200 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+          >
+            Buat Akun Baru
+          </Link>
+        </div>
 
-        try {
-            const res = await fetch(`${apiUrl}/auth/login`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                // PERBAIKAN DI SINI:
-                // Backend mengharapkan field 'loginIdentifier', bukan 'email'.
-                // Kita petakan value 'email' dari state ke key 'loginIdentifier'.
-                body: JSON.stringify({ 
-                    loginIdentifier: email, 
-                    password: password 
-                }),
-            });
+        {/* Footer Info */}
+        <div className="pt-12 mt-12 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
+          <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+            <span className="block text-2xl mb-2">📂</span>
+            <strong className="block text-gray-900 mb-1">Arsip Diskusi</strong>
+            Simpan dan telusuri riwayat diskusi dengan mudah.
+          </div>
+          <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+            <span className="block text-2xl mb-2">💾</span>
+            <strong className="block text-gray-900 mb-1">Cadangan Data</strong>
+            Integrasi backup dari berbagai sumber data.
+          </div>
+          <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
+            <span className="block text-2xl mb-2">🔒</span>
+            <strong className="block text-gray-900 mb-1">Aman & Terkontrol</strong>
+            Sistem login aman dengan verifikasi pengguna.
+          </div>
+        </div>
 
-            if (!res.ok) {
-                const errorText = await res.text();
-                try {
-                    const errorJson = JSON.parse(errorText);
-                    
-                    // Handle format error array dari express-validator (seperti di log Anda)
-                    if (errorJson.errors && Array.isArray(errorJson.errors)) {
-                         // Ambil pesan error pertama dari array
-                        throw new Error(errorJson.errors[0].msg);
-                    }
-                    
-                    throw new Error(errorJson.message || 'Gagal untuk login');
-                } catch (jsonError) {
-                    // Fallback jika error bukan JSON valid
-                    console.error("Server Error Response (Raw):", errorText);
-                    if (jsonError instanceof Error && jsonError.message !== "Unexpected token..." ) {
-                        throw jsonError; // Lempar error yang sudah kita tangkap di atas (dari errorJson)
-                    }
-
-                    if (res.status === 404) {
-                        throw new Error('Endpoint login tidak ditemukan (404).');
-                    } else if (res.status === 500) {
-                        throw new Error('Terjadi kesalahan internal pada server (500).');
-                    } else {
-                        throw new Error(`Gagal Login (Status: ${res.status}).`);
-                    }
-                }
-            }
-
-            const data = await res.json();
-            localStorage.setItem('token', data.token);
-            router.push('/dashboard');
-        } catch (err) {
-            if (err instanceof Error) {
-                setError(err.message);
-            } else {
-                setError('Terjadi kesalahan yang tidak terduga');
-            }
-        }
-    };
-
-    return (
-        <AuthLayout>
-            <h1 className="text-2xl font-bold text-center text-gray-900">Selamat Datang Kembali</h1>
-            <p className="text-center text-gray-600">Silakan masuk untuk melanjutkan</p>
-            <form onSubmit={handleSubmit} className="space-y-6">
-                <InputField
-                    id="email"
-                    label="Alamat Email / Username" 
-                    type="text" // Ubah ke text agar bisa terima username juga jika backend mendukung
-                    required
-                    autoComplete="username"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                />
-                <InputField
-                    id="password"
-                    label="Kata Sandi"
-                    type="password"
-                    required
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                />
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button type="submit">Masuk</Button>
-            </form>
-            <p className="text-sm text-center text-gray-600">
-                Belum punya akun?{' '}
-                <Link href="/register" className="font-medium text-indigo-600 hover:text-indigo-500">
-                    Daftar di sini
-                </Link>
-            </p>
-        </AuthLayout>
-    );
+        <p className="text-xs text-gray-400 mt-8">
+          &copy; {new Date().getFullYear()} RSpace System. All rights reserved.
+        </p>
+      </div>
+    </div>
+  );
 }

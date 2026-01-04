@@ -1,4 +1,3 @@
-// src/app/login/page.tsx
 "use client";
 
 import { useState } from 'react';
@@ -9,36 +8,65 @@ import { InputField } from '@/components/fragments/InputField';
 import { Button } from '@/components/elements/Button';
 
 export default function LoginPage() {
+    // State tetap menggunakan nama 'email' agar sesuai dengan input form
+    // namun bisa berisi email atau username
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError('');
+        setLoading(true);
         
-        // Mengambil URL API dari environment variable
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         if (!apiUrl) {
             setError('Konfigurasi API URL tidak ditemukan.');
+            setLoading(false);
             return;
         }
 
         try {
-            // Menggunakan URL lengkap untuk request
             const res = await fetch(`${apiUrl}/auth/login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email, password }),
+                // Backend mengharapkan 'loginIdentifier' (username/email)
+                body: JSON.stringify({ 
+                    loginIdentifier: email, 
+                    password: password 
+                }),
             });
 
-            const data = await res.json();
             if (!res.ok) {
-                throw new Error(data.message || 'Gagal untuk login');
+                const errorText = await res.text();
+                try {
+                    const errorJson = JSON.parse(errorText);
+                    
+                    // Handle format error array dari express-validator
+                    if (errorJson.errors && Array.isArray(errorJson.errors)) {
+                        throw new Error(errorJson.errors[0].msg);
+                    }
+                    
+                    throw new Error(errorJson.message || 'Gagal untuk login');
+                } catch (jsonError) {
+                    if (jsonError instanceof Error && jsonError.message !== "Unexpected token..." && !jsonError.message.includes('JSON')) {
+                        throw jsonError;
+                    }
+
+                    if (res.status === 404) {
+                        throw new Error('Endpoint login tidak ditemukan (404).');
+                    } else if (res.status === 500) {
+                        throw new Error('Terjadi kesalahan internal pada server (500).');
+                    } else {
+                        throw new Error(`Gagal Login (Status: ${res.status}).`);
+                    }
+                }
             }
-            
+
+            const data = await res.json();
             localStorage.setItem('token', data.token);
             router.push('/dashboard');
         } catch (err) {
@@ -47,22 +75,25 @@ export default function LoginPage() {
             } else {
                 setError('Terjadi kesalahan yang tidak terduga');
             }
+        } finally {
+            setLoading(false);
         }
     };
 
     return (
         <AuthLayout>
             <h1 className="text-2xl font-bold text-center text-gray-900">Selamat Datang Kembali</h1>
-            <p className="text-center text-gray-600">Silakan masuk untuk melanjutkan</p>
+            <p className="text-center text-gray-600">Silakan masuk ke RSpace</p>
             <form onSubmit={handleSubmit} className="space-y-6">
                 <InputField
                     id="email"
-                    label="Alamat Email"
-                    type="email"
+                    label="Alamat Email / Username" 
+                    type="text"
                     required
-                    autoComplete="email"
+                    autoComplete="username"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Masukkan email atau username"
                 />
                 <InputField
                     id="password"
@@ -73,8 +104,11 @@ export default function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                 />
-                {error && <p className="text-sm text-red-600">{error}</p>}
-                <Button type="submit">Masuk</Button>
+                {error && <div className="p-3 bg-red-50 text-sm text-red-600 rounded-md">{error}</div>}
+                
+                <Button type="submit" disabled={loading}>
+                    {loading ? 'Memproses...' : 'Masuk'}
+                </Button>
             </form>
             <p className="text-sm text-center text-gray-600">
                 Belum punya akun?{' '}
