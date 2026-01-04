@@ -1,3 +1,4 @@
+// src/app/page.tsx
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -52,13 +53,13 @@ export default function LandingPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-50 to-white flex flex-col items-center justify-center p-6 relative">
       
-      {/* Tombol Pengaturan di Pojok Kanan Atas */}
-      <div className="absolute top-4 right-4">
+      {/* Tombol Pengaturan di Pojok Kanan Atas - Disesuaikan agar responsif */}
+      <div className="absolute top-4 right-4 z-10">
         <button 
           onClick={() => setShowSettings(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-white text-gray-600 rounded-full shadow-md hover:bg-gray-100 transition-colors text-sm font-medium border border-gray-200"
+          className="flex items-center gap-2 px-3 py-1 md:px-4 md:py-2 bg-white text-gray-600 rounded-full shadow-md hover:bg-gray-100 transition-colors text-xs md:text-sm font-medium border border-gray-200"
         >
-          <span>⚙️</span> Pengaturan API
+          <span>⚙️</span> <span className="hidden md:inline">Pengaturan API</span>
         </button>
       </div>
 
@@ -78,10 +79,10 @@ export default function LandingPage() {
                   checked={!useManual}
                   onChange={() => setUseManual(false)}
                 />
-                <div>
+                <div className="overflow-hidden">
                   <span className="font-semibold text-gray-800">Gunakan Default (.env)</span>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Menggunakan konfigurasi bawaan laptop/server.<br/>
+                  <p className="text-xs text-gray-500 mt-1 break-all">
+                    Menggunakan konfigurasi bawaan.<br/>
                     <span className="font-mono bg-gray-100 px-1 rounded">{currentEnvUrl}</span>
                   </p>
                 </div>
@@ -124,43 +125,46 @@ export default function LandingPage() {
                 onClick={handleSaveSettings}
                 className="px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-md text-sm font-medium"
               >
-                Simpan Pengaturan
+                Simpan
               </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* KONTEN UTAMA HALAMAN (Tidak berubah banyak) */}
-      <div className="max-w-3xl w-full text-center space-y-8">
+      {/* KONTEN UTAMA HALAMAN */}
+      <div className="max-w-3xl w-full text-center space-y-8 mt-10 md:mt-0">
         <div className="space-y-4">
-          <h1 className="text-5xl font-extrabold text-indigo-600 tracking-tight">
+          {/* Tipografi Responsif */}
+          <h1 className="text-4xl md:text-5xl font-extrabold text-indigo-600 tracking-tight">
             RSpace
           </h1>
-          <p className="text-2xl text-gray-700 font-medium">
+          <p className="text-xl md:text-2xl text-gray-700 font-medium">
             Manajemen Arsip & Data Terpusat
           </p>
-          <p className="text-gray-500 max-w-xl mx-auto leading-relaxed">
+          <p className="text-gray-500 max-w-xl mx-auto leading-relaxed text-sm md:text-base">
             Platform all-in-one untuk mengelola arsip diskusi, mencadangkan file penting dari berbagai sumber, 
             dan manajemen pengguna yang efisien.
           </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8">
+        {/* Tombol Aksi - Stack di Mobile */}
+        <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-8 w-full px-4 md:px-0">
           <Link 
             href="/login" 
-            className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl"
+            className="w-full sm:w-auto px-8 py-3 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition-colors shadow-lg hover:shadow-xl text-center"
           >
             Masuk Sekarang
           </Link>
           <Link 
             href="/register" 
-            className="w-full sm:w-auto px-8 py-3 bg-white text-indigo-600 border border-indigo-200 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-sm"
+            className="w-full sm:w-auto px-8 py-3 bg-white text-indigo-600 border border-indigo-200 font-semibold rounded-lg hover:bg-indigo-50 transition-colors shadow-sm text-center"
           >
             Buat Akun Baru
           </Link>
         </div>
 
+        {/* Fitur Grid - Stack di Mobile */}
         <div className="pt-12 mt-12 border-t border-gray-200 grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-gray-600">
           <div className="p-4 bg-white rounded-lg shadow-sm border border-gray-100">
             <span className="block text-2xl mb-2">📂</span>

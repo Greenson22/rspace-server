@@ -10,7 +10,8 @@ interface CardProps {
 
 export const Card = ({ children, className = '' }: CardProps) => {
     return (
-        <div className={`p-8 bg-white rounded-lg shadow ${className}`}>
+        // Menggunakan p-4 untuk mobile dan p-8 untuk layar medium ke atas
+        <div className={`p-4 md:p-8 bg-white rounded-lg shadow ${className}`}>
             {children}
         </div>
     );
