@@ -25,8 +25,7 @@ export const registerUser = (email: string, password: string, name: string, user
 
             const createdAt = new Date().toISOString();
             
-            // PERUBAHAN 1: Kita set verificationToken dan tokenExpires menjadi NULL
-            // karena kita menggunakan verifikasi manual.
+            // Kita set verificationToken dan tokenExpires menjadi NULL karena verifikasi manual.
             const sql = 'INSERT INTO users (email, password, name, username, createdAt, verificationToken, tokenExpires) VALUES (?, ?, ?, ?, ?, NULL, NULL)';
             
             db.run(sql, [email, hash, name, username, createdAt], async function (err) {
@@ -40,16 +39,13 @@ export const registerUser = (email: string, password: string, name: string, user
                     return reject(new Error('Gagal mendaftarkan pengguna.'));
                 }
                 
-                // PERUBAHAN 2: Hapus pengiriman email dan update pesan sukses
                 resolve({ message: 'Registrasi berhasil! Mohon tunggu verifikasi manual dari Admin agar akun Anda aktif.' });
             });
         });
     });
 };
 
-// ... (fungsi verifyUser tetap ada jika ingin disimpan, atau bisa dihapus) ...
 export const verifyUser = (token: string): Promise<{ message: string }> => {
-   // ... (kode lama biarkan saja atau hapus jika mau bersih total)
    return Promise.reject(new Error('Fitur verifikasi email dinonaktifkan.'));
 };
 
@@ -67,8 +63,8 @@ export const loginUser = (loginIdentifier: string, password: string): Promise<{ 
                 return reject(new Error('Username/Email atau password salah.'));
             }
 
+            // CEK STATUS VERIFIKASI DI SINI
             if (user.isVerified === 0) {
-                // PERUBAHAN 3: Update pesan error login
                 return reject(new Error('Akun Anda belum diverifikasi oleh Admin. Silakan hubungi Admin untuk aktivasi.'));
             }
 
@@ -91,6 +87,5 @@ export const loginUser = (loginIdentifier: string, password: string): Promise<{ 
 };
 
 export const resendVerification = (email: string): Promise<{ message: string }> => {
-    // Nonaktifkan fitur resend karena verifikasi manual
     return Promise.reject(new Error('Verifikasi dilakukan secara manual oleh Admin.'));
 };
