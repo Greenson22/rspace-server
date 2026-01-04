@@ -6,10 +6,11 @@ import { useRouter } from 'next/navigation';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { InputField } from '@/components/fragments/InputField';
 import { Button } from '@/components/elements/Button';
+// 1. Impor helper konfigurasi API
+import { getApiUrl } from '@/utils/apiConfig';
 
 export default function LoginPage() {
-    // State tetap menggunakan nama 'email' agar sesuai dengan input form
-    // namun bisa berisi email atau username
+    // State 'email' tetap digunakan untuk menampung input (bisa email atau username)
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -21,13 +22,8 @@ export default function LoginPage() {
         setError('');
         setLoading(true);
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-        if (!apiUrl) {
-            setError('Konfigurasi API URL tidak ditemukan.');
-            setLoading(false);
-            return;
-        }
+        // 2. Ambil URL API secara dinamis (mengikuti settingan localStorage/Env)
+        const apiUrl = getApiUrl();
 
         try {
             const res = await fetch(`${apiUrl}/auth/login`, {
@@ -52,12 +48,13 @@ export default function LoginPage() {
                     
                     throw new Error(errorJson.message || 'Gagal untuk login');
                 } catch (jsonError) {
-                    if (jsonError instanceof Error && jsonError.message !== "Unexpected token..." && !jsonError.message.includes('JSON')) {
+                    // Jika error bukan JSON valid (misal 404 HTML page)
+                    if (jsonError instanceof Error && !jsonError.message.includes('JSON')) {
                         throw jsonError;
                     }
 
                     if (res.status === 404) {
-                        throw new Error('Endpoint login tidak ditemukan (404).');
+                        throw new Error('Endpoint login tidak ditemukan (404). Cek URL API.');
                     } else if (res.status === 500) {
                         throw new Error('Terjadi kesalahan internal pada server (500).');
                     } else {
