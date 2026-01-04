@@ -1,4 +1,4 @@
-// rspace_server/client/src/app/dashboard/page.tsx
+// src/app/dashboard/page.tsx
 "use client";
 
 import { useEffect, useState } from 'react';
@@ -9,8 +9,9 @@ import { ProfileView } from '@/components/fragments/ProfileView';
 import { Card } from '@/components/elements/Card';
 import ArchiveView from '@/components/fragments/ArchiveView';
 import { UserManagement } from '@/components/fragments/UserManagement';
-// 1. Impor komponen SharingView
 import { SharingView } from '@/components/fragments/SharingView';
+// Impor helper
+import { getApiUrl } from '@/utils/apiConfig';
 
 interface UserProfile { 
     id: number;
@@ -18,7 +19,6 @@ interface UserProfile {
     email: string; 
 }
 
-// 2. Tambahkan 'sharing' ke tipe ActiveView
 type ActiveView = 'dashboard' | 'archive' | 'backup' | 'about' | 'profile' | 'users' | 'sharing';
 
 export default function DashboardPage() {
@@ -35,12 +35,9 @@ export default function DashboardPage() {
         }
 
         const fetchProfile = async () => {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            if (!apiUrl) {
-                setLoading(false);
-                return;
-            }
-
+            // Gunakan getApiUrl
+            const apiUrl = getApiUrl();
+            
             try {
                 const res = await fetch(`${apiUrl}/profile`, {
                     headers: { 'Authorization': `Bearer ${token}` },
@@ -72,7 +69,6 @@ export default function DashboardPage() {
             case 'backup': return <BackupList />;
             case 'profile': return <ProfileView />;
             case 'about': return <AboutContent />;
-            // 3. Tambahkan render case untuk sharing
             case 'sharing': return <SharingView />;
             case 'users': 
                 return isAdmin ? <UserManagement /> : <Card><p>Akses Ditolak</p></Card>;
@@ -111,13 +107,10 @@ export default function DashboardPage() {
                     <div className="flex justify-between h-16">
                         <div className="flex items-center space-x-6">
                              <h1 className="text-xl font-bold text-indigo-600">RSpace</h1>
-                             <div className="flex items-center space-x-2">
+                             <div className="flex items-center space-x-2 overflow-x-auto">
                                 <a onClick={() => setActiveView('dashboard')} className={getNavClass('dashboard')}>Dasbor</a>
                                 <a onClick={() => setActiveView('archive')} className={getNavClass('archive')}>Arsip</a>
-                                
-                                {/* 4. Tambahkan Menu Navigasi Sharing */}
                                 <a onClick={() => setActiveView('sharing')} className={getNavClass('sharing')}>Sharing</a>
-                                
                                 <a onClick={() => setActiveView('backup')} className={getNavClass('backup')}>Cadangan</a>
                                 <a onClick={() => setActiveView('profile')} className={getNavClass('profile')}>Profil</a>
                                 

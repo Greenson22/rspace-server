@@ -1,9 +1,12 @@
+// src/components/fragments/SharingView.tsx
 "use client";
 
 import { useState, useEffect, useRef } from 'react';
 import { Card } from '../elements/Card';
 import { Button } from '../elements/Button';
 import { Input } from '../elements/Input';
+// Impor helper
+import { getApiUrl } from '@/utils/apiConfig';
 
 interface FileItem {
     name: string;
@@ -13,28 +16,25 @@ interface FileItem {
 }
 
 export const SharingView = () => {
-    const [currentPath, setCurrentPath] = useState(''); // Path relatif saat ini
+    const [currentPath, setCurrentPath] = useState('');
     const [items, setItems] = useState<FileItem[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     
-    // State untuk Folder Baru
     const [isCreatingFolder, setIsCreatingFolder] = useState(false);
     const [newFolderName, setNewFolderName] = useState('');
 
-    // State untuk Upload
     const fileInputRef = useRef<HTMLInputElement>(null);
     const [uploading, setUploading] = useState(false);
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    // Ambil URL dinamis
+    const apiUrl = getApiUrl();
 
-    // --- FETCH DATA ---
     const fetchItems = async () => {
         setLoading(true);
         setError('');
         const token = localStorage.getItem('token');
         try {
-            // Encode path untuk URL (misal spasi jadi %20)
             const encodedPath = encodeURIComponent(currentPath);
             const res = await fetch(`${apiUrl}/sharing/list?path=${encodedPath}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -50,20 +50,17 @@ export const SharingView = () => {
     };
 
     useEffect(() => {
-        if (apiUrl) fetchItems();
-    }, [currentPath, apiUrl]);
-
-    // --- ACTIONS ---
+        fetchItems();
+         // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPath]); // apiUrl tidak perlu masuk dependensi karena dianggap konstan per load
 
     const handleNavigate = (folderName: string) => {
-        // Gabungkan path saat ini dengan folder tujuan
         const nextPath = currentPath ? `${currentPath}/${folderName}` : folderName;
         setCurrentPath(nextPath);
     };
 
     const handleGoBack = () => {
         if (!currentPath) return;
-        // Hapus segmen terakhir dari path
         const segments = currentPath.split('/');
         segments.pop();
         setCurrentPath(segments.join('/'));
@@ -114,7 +111,6 @@ export const SharingView = () => {
         const token = localStorage.getItem('token');
         const itemPath = currentPath ? `${currentPath}/${fileName}` : fileName;
         
-        // Buat link sementara untuk download
         try {
              const res = await fetch(`${apiUrl}/sharing/download?path=${encodeURIComponent(itemPath)}`, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -146,7 +142,6 @@ export const SharingView = () => {
         formData.append('file', file);
 
         try {
-            // Kirim path tujuan lewat query param
             const res = await fetch(`${apiUrl}/sharing/upload?path=${encodeURIComponent(currentPath)}`, {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}` },
@@ -155,16 +150,15 @@ export const SharingView = () => {
 
             if (!res.ok) throw new Error('Gagal upload');
             
-            fetchItems(); // Refresh list
+            fetchItems(); 
         } catch (err) {
             alert('Gagal mengunggah file.');
         } finally {
             setUploading(false);
-            if (fileInputRef.current) fileInputRef.current.value = ""; // Reset input
+            if (fileInputRef.current) fileInputRef.current.value = "";
         }
     };
 
-    // --- RENDER HELPERS ---
     const formatSize = (bytes: number) => {
         if (bytes === 0) return '-';
         const k = 1024;
@@ -193,7 +187,6 @@ export const SharingView = () => {
                 </div>
             </div>
 
-            {/* Breadcrumb / Navigasi Folder */}
             <div className="flex items-center space-x-2 mb-4 p-2 bg-gray-50 rounded text-sm text-gray-600">
                 <button 
                     onClick={() => setCurrentPath('')}
@@ -203,7 +196,6 @@ export const SharingView = () => {
                 </button>
                 {currentPath.split('/').map((segment, index, arr) => {
                     if (!segment) return null;
-                    // Buat path untuk breadcrumb item ini
                     const pathUpToHere = arr.slice(0, index + 1).join('/');
                     return (
                         <div key={pathUpToHere} className="flex items-center">
@@ -219,7 +211,6 @@ export const SharingView = () => {
                 })}
             </div>
 
-            {/* Form Folder Baru */}
             {isCreatingFolder && (
                 <div className="mb-4 flex space-x-2 items-end p-4 border border-indigo-100 bg-indigo-50 rounded">
                     <div className="flex-grow">
@@ -234,11 +225,9 @@ export const SharingView = () => {
                 </div>
             )}
 
-            {/* Error & Loading */}
             {error && <p className="text-red-600 mb-4">{error}</p>}
             {loading && <p className="text-gray-500">Memuat...</p>}
 
-            {/* File List */}
             {!loading && (
                 <div className="border rounded-md overflow-hidden">
                     {items.length === 0 ? (

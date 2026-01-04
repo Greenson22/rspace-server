@@ -5,6 +5,8 @@ import { useEffect, useState, useRef } from 'react';
 import { Card } from '../elements/Card';
 import Image from 'next/image';
 import { Button } from '../elements/Button';
+// Impor helper
+import { getApiUrl } from '@/utils/apiConfig';
 
 interface UserProfile {
     name: string | null;
@@ -29,20 +31,16 @@ export const ProfileView = () => {
 
     const fileInputRef = useRef<HTMLInputElement>(null);
     
-    // Mengambil URL API dari environment variable
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-    // Mendapatkan base URL server untuk gambar
-    const serverBaseUrl = apiUrl ? apiUrl.replace('/api', '') : '';
+    // Ambil URL dinamis
+    const apiUrl = getApiUrl();
+    
+    // Mendapatkan base URL server untuk gambar (hapus /api di akhir jika ada)
+    const serverBaseUrl = apiUrl.replace('/api', '');
 
     const fetchProfile = async () => {
         const token = localStorage.getItem('token');
         if (!token) {
             setError('Autentikasi gagal. Silakan login kembali.');
-            setLoading(false);
-            return;
-        }
-        if (!apiUrl) {
-            setError('Konfigurasi API URL tidak ditemukan.');
             setLoading(false);
             return;
         }
@@ -98,10 +96,6 @@ export const ProfileView = () => {
             setUploadError('Sesi Anda telah berakhir. Silakan login kembali.');
             return;
         }
-        if (!apiUrl) {
-            setUploadError('Konfigurasi API URL tidak ditemukan.');
-            return;
-        }
 
         setIsUploading(true);
         setUploadError('');
@@ -145,7 +139,6 @@ export const ProfileView = () => {
         });
     };
     
-    // Gunakan base URL dari server untuk gambar
     const profileImageUrl = profile?.profile_picture_path && serverBaseUrl
         ? `${serverBaseUrl}/storage/${profile.profile_picture_path}` 
         : null;

@@ -7,10 +7,12 @@ import { useRouter } from 'next/navigation';
 import { AuthLayout } from '@/components/layouts/AuthLayout';
 import { InputField } from '@/components/fragments/InputField';
 import { Button } from '@/components/elements/Button';
+// Impor helper konfigurasi API
+import { getApiUrl } from '@/utils/apiConfig';
 
 export default function RegisterPage() {
     const [name, setName] = useState('');
-    const [username, setUsername] = useState(''); // Pastikan state username ada
+    const [username, setUsername] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -22,12 +24,8 @@ export default function RegisterPage() {
         setError('');
         setSuccess('');
 
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
-        if (!apiUrl) {
-            setError('Konfigurasi API URL tidak ditemukan.');
-            return;
-        }
+        // Gunakan getApiUrl() untuk mendapatkan URL yang benar (Env atau Manual)
+        const apiUrl = getApiUrl();
 
         try {
             const res = await fetch(`${apiUrl}/auth/register`, {
@@ -45,10 +43,8 @@ export default function RegisterPage() {
                 throw new Error(data.message || 'Gagal untuk mendaftar');
             }
             
-            // PERUBAHAN: Pesan notifikasi yang jelas untuk user
             setSuccess('Registrasi berhasil! Akun Anda sedang menunggu verifikasi dari Admin sebelum dapat digunakan.');
             
-            // Opsional: Perpanjang waktu redirect agar user sempat membaca pesan
             setTimeout(() => {
                 router.push('/login');
             }, 4000); 
@@ -75,7 +71,6 @@ export default function RegisterPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
-                 {/* Input Username (Wajib ada) */}
                 <InputField
                     id="username"
                     label="Username"
@@ -105,7 +100,6 @@ export default function RegisterPage() {
                 />
                 {error && <p className="text-sm text-red-600">{error}</p>}
                 
-                {/* Tampilan pesan sukses yang lebih menonjol */}
                 {success && (
                     <div className="p-4 bg-green-50 border border-green-200 rounded-md">
                         <p className="text-sm text-green-700 font-medium text-center">{success}</p>
