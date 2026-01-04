@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card } from '../elements/Card';
+// 1. Impor helper konfigurasi API
+import { getApiUrl } from '@/utils/apiConfig';
 
 interface BackupFile {
     uniqueName: string;
@@ -25,14 +27,11 @@ export const BackupList = () => {
                 return;
             }
 
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-            if (!apiUrl) {
-                setError('Konfigurasi API URL tidak ditemukan.');
-                setLoading(false);
-                return;
-            }
+            // 2. Ambil URL API secara dinamis (Env atau Manual)
+            const apiUrl = getApiUrl();
 
             try {
+                // Gunakan variable apiUrl yang dinamis
                 const [rspaceRes, perpuskuRes] = await Promise.all([
                     fetch(`${apiUrl}/backups/rspace`, { headers: { 'Authorization': `Bearer ${token}` } }),
                     fetch(`${apiUrl}/backups/perpusku`, { headers: { 'Authorization': `Bearer ${token}` } })

@@ -3,6 +3,8 @@
 
 import { useEffect, useState } from 'react';
 import { Card } from '../elements/Card';
+// 1. Impor helper konfigurasi API
+import { getApiUrl } from '@/utils/apiConfig';
 
 interface User {
     id: number;
@@ -18,14 +20,15 @@ export const UserManagement = () => {
     const [error, setError] = useState('');
     const [actionMessage, setActionMessage] = useState('');
 
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+    // 2. Ambil URL API secara dinamis
+    const apiUrl = getApiUrl();
 
     const fetchUsers = async () => {
         const token = localStorage.getItem('token');
-        if (!token || !apiUrl) return;
+        if (!token) return;
 
         try {
-            // Menggunakan endpoint admin yang sudah ada di backend
+            // Menggunakan endpoint admin dengan apiUrl dinamis
             const res = await fetch(`${apiUrl}/admin/users`, {
                 headers: { 'Authorization': `Bearer ${token}` },
             });
@@ -41,6 +44,7 @@ export const UserManagement = () => {
 
     useEffect(() => {
         fetchUsers();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleVerifyUser = async (userId: number) => {
@@ -95,7 +99,6 @@ export const UserManagement = () => {
             {error && <p className="text-red-600">{error}</p>}
 
             {!loading && !error && (
-                // Wrapper scrollable untuk tabel responsif
                 <div className="overflow-x-auto border rounded-md">
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
