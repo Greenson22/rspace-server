@@ -10,6 +10,7 @@ import { Button } from '@/components/elements/Button';
 
 export default function RegisterPage() {
     const [name, setName] = useState('');
+    const [username, setUsername] = useState(''); // 1. Tambah state username
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
@@ -21,7 +22,6 @@ export default function RegisterPage() {
         setError('');
         setSuccess('');
 
-        // Mengambil URL API dari environment variable
         const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
         if (!apiUrl) {
@@ -30,15 +30,20 @@ export default function RegisterPage() {
         }
 
         try {
-            // Menggunakan URL lengkap untuk request
             const res = await fetch(`${apiUrl}/auth/register`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name, email, password }),
+                // 2. Sertakan username dalam body request
+                body: JSON.stringify({ name, username, email, password }),
             });
 
             const data = await res.json();
+            
             if (!res.ok) {
+                // Handle pesan error dari validator backend (array of errors)
+                if (data.errors && Array.isArray(data.errors)) {
+                     throw new Error(data.errors[0].msg);
+                }
                 throw new Error(data.message || 'Gagal untuk mendaftar');
             }
             
@@ -69,6 +74,18 @@ export default function RegisterPage() {
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                 />
+                
+                {/* 3. Tambahkan Input Field untuk Username */}
+                <InputField
+                    id="username"
+                    label="Username"
+                    type="text"
+                    required
+                    autoComplete="username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                />
+
                 <InputField
                     id="email"
                     label="Alamat Email"
